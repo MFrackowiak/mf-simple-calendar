@@ -10,18 +10,21 @@ if __name__ == '__main__':
 
     db_manager = DatabaseManager(True)
 
-    u = db_manager.add_user("TestUser4", "VerySafePassword", 1)
-    print(u)
+    u1 = db_manager.add_user("TestUser11", "VerySafePassword", 1)
+    print(u1)
 
-    c = db_manager.add_calendar(1, "TestCalendar", "pink")
+    u2 = db_manager.add_user("TestUser11", "VerySafePassword", 1)
+    print(u2)
+
+    c = db_manager.add_calendar(u1, "TestCalendar", "pink")
     print(c)
 
     e = db_manager.add_event(c, "TestEvent", "TestEventDescription", datetime.utcnow() + timedelta(days=1),
                              datetime.utcnow() + timedelta(days=1, seconds=3600 * 4), 0, False)
     print(e)
 
-    s = db_manager.add_share(c, u, False)
+    s = db_manager.add_share(c, u2, False)
     print(s)
 
-    i = db_manager.add_invite(e, u)
+    i = db_manager.add_invite(e, u2)
     print(i)
