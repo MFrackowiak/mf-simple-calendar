@@ -10,21 +10,27 @@ if __name__ == '__main__':
 
     db_manager = DatabaseManager(True)
 
-    u1 = db_manager.add_user("TestUser11", "VerySafePassword", 1)
-    print(u1)
+    test_add = False
 
-    u2 = db_manager.add_user("TestUser11", "VerySafePassword", 1)
-    print(u2)
+    if test_add:
+        u1 = db_manager.add_user("TestUser12", "VerySafePassword", 1)
+        print(u1)
 
-    c = db_manager.add_calendar(u1, "TestCalendar", "pink")
-    print(c)
+        u2 = db_manager.add_user("TestUser21", "VerySafePassword", 1)
+        print(u2)
 
-    e = db_manager.add_event(c, "TestEvent", "TestEventDescription", datetime.utcnow() + timedelta(days=1),
-                             datetime.utcnow() + timedelta(days=1, seconds=3600 * 4), 0, False)
-    print(e)
+        c = db_manager.add_calendar(u1, "TestCalendar", "pink")
+        print(c)
 
-    s = db_manager.add_share(c, u2, False)
-    print(s)
+        e = db_manager.add_event(c, "TestEvent", "TestEventDescription", datetime.utcnow() + timedelta(days=1),
+                                 datetime.utcnow() + timedelta(days=1, seconds=3600 * 4), 0, False)
+        print(e)
 
-    i = db_manager.add_invite(e, u2)
-    print(i)
+        s = db_manager.add_share(c, u2, False)
+        print(s)
+
+        i = db_manager.add_invite(e, u2)
+        print(i)
+
+    print(db_manager.get_user_data("TestUser12"))
+    print(db_manager.get_user_data("TestUser21"))

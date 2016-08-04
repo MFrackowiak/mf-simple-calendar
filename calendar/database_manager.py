@@ -1,7 +1,7 @@
 import hashlib
 
 from sqlalchemy import create_engine, Table, Column, Integer, DateTime, String, MetaData, ForeignKey, Boolean,\
-    UniqueConstraint
+    UniqueConstraint, select
 from sqlalchemy_utils import create_database, database_exists
 
 from .config import server_type, server_url, db_user, db_password, database_name, debug
@@ -84,6 +84,28 @@ class DatabaseManager:
 
         return result.inserted_primary_key[0]
 
+    def _fetch_single_select(self, _select, mapping=None):
+        connection = self._engine.connect()
+
+        result = connection.execute(_select).fetchone()
+
+        connection.close()
+
+        return mapping(result) if mapping is not None else result
+
+    def _fetch_many_single_select(self, _select, mapping=None, limit=None):
+        connection = self._engine.connect()
+
+        result = connection.execute(_select)
+
+        connection.close()
+
+        if limit is None:
+            return map(mapping, result) if mapping is not None else result
+        else:
+            # TODO return only limit, offset should be added
+            pass
+
     def add_user(self, username, password, own_timezone):
         _insert = self._users.insert().values(username=username, password=get_password_hash(password),
                                               own_timezone=own_timezone)
@@ -115,3 +137,15 @@ class DatabaseManager:
         _insert = self._invites.insert().values(event_id=event_id, user_id=user_id)
 
         return self._execute_single_insert(_insert)
+
+    def get_user_data(self, username):
+        _select = self._users.select(self._users.c.username == username)
+
+        return self._fetch_single_select(_select, lambda r: {"user_id": r[0], "username": r[1], "password": r[2],
+                                                             "tz": r[3]})
+
+    def get_users_like(self, like_string):
+        _select = self._users.select(self._users.c.username.like(like_string))
+
+        return self._fetch_many_single_select(_select, lambda r: {"user_id": r[0], "username": r[1], "password": r[2],
+                                                                  "tz": r[3]})
