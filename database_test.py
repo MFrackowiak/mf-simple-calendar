@@ -34,3 +34,5 @@ if __name__ == '__main__':
 
     print(db_manager.get_user_data("TestUser12"))
     print(db_manager.get_user_data("TestUser21"))
+
+    db_manager.get_invites(1)

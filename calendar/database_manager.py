@@ -1,8 +1,10 @@
 import hashlib
 
-from sqlalchemy import create_engine, Table, Column, Integer, DateTime, String, MetaData, ForeignKey, Boolean,\
-    UniqueConstraint, select
+from sqlalchemy import create_engine, Table, Column, Integer, DateTime, String, MetaData, ForeignKey, Boolean, \
+    UniqueConstraint, select, join
+from sqlalchemy.sql import and_, or_
 from sqlalchemy_utils import create_database, database_exists
+from datetime import datetime
 
 from .config import server_type, server_url, db_user, db_password, database_name, debug
 from .var_utils import get_password_hash
@@ -71,9 +73,10 @@ class DatabaseManager:
             metadata.create_all(self._engine)
 
     def _get_engine(self):
-        return create_engine("{type}://{user}:{pswd}@{host}/{name}".format(type=server_type, user=db_user, pswd=db_password,
-                                                                           host=server_url, name=database_name),
-                             encoding='utf8', echo=debug)
+        return create_engine(
+            "{type}://{user}:{pswd}@{host}/{name}".format(type=server_type, user=db_user, pswd=db_password,
+                                                          host=server_url, name=database_name),
+            encoding='utf8', echo=debug)
 
     def _execute_single_insert(self, _insert):
         connection = self._engine.connect()
@@ -87,24 +90,23 @@ class DatabaseManager:
     def _fetch_single_select(self, _select, mapping=None):
         connection = self._engine.connect()
 
-        result = connection.execute(_select).fetchone()
-
-        connection.close()
-
-        return mapping(result) if mapping is not None else result
-
-    def _fetch_many_single_select(self, _select, mapping=None, limit=None):
-        connection = self._engine.connect()
-
         result = connection.execute(_select)
 
         connection.close()
 
-        if limit is None:
-            return map(mapping, result) if mapping is not None else result
-        else:
-            # TODO return only limit, offset should be added
-            pass
+        if result.rowcount < 1:
+            raise ValueError("Zadany rekord nie istnieje w bazie danych.")
+
+        return mapping(result.fetchone()) if mapping is not None else result.fetchone()
+
+    def _fetch_many_select(self, _select, mapping=None):
+        connection = self._engine.connect()
+
+        result = connection.execute(_select).fetchall()
+
+        connection.close()
+
+        return map(mapping, result) if mapping is not None else result
 
     def add_user(self, username, password, own_timezone):
         _insert = self._users.insert().values(username=username, password=get_password_hash(password),
@@ -147,5 +149,77 @@ class DatabaseManager:
     def get_users_like(self, like_string):
         _select = self._users.select(self._users.c.username.like(like_string))
 
-        return self._fetch_many_single_select(_select, lambda r: {"user_id": r[0], "username": r[1], "password": r[2],
-                                                                  "tz": r[3]})
+        return self._fetch_many_select(_select, lambda r: {"user_id": r[0], "username": r[1], "password": r[2],
+                                                           "tz": r[3]})
+
+    def get_user_calendars(self, user_id):
+        _select = self._calendars.select(self._calendars.c.user_id == user_id)
+
+        own_calendars = self._fetch_many_select(_select, lambda r: {"calendar_id": r[0], "calendar_name": r[2],
+                                                                    "calendar_color": r[3]})
+
+        _select = select([self._users.c.username, self._calendars.c.calendar_id, self._calendars.c.calendar_name,
+                          self._calendars.c.calendar_color, self._shares.c.write_permission]).select_from(
+            self._users.join(self._calendars.join(self._shares.select(self._shares.c.user_id == user_id))))
+
+        shared_calendars = self._fetch_many_select(_select, lambda r: {"owner": r[0], "calendar_id": r[1],
+                                                                       "calendar_name": r[2], "calendar_color": r[3],
+                                                                       "write_permission": r[4]})
+
+        return {"my_calendars": own_calendars, "shared_with_me": shared_calendars}
+
+    def get_user_calendar_privilege(self, user_id, calendar_id):
+        _select = select([self._calendars.c.user_id]).where(self._calendars.c.calendar_id == calendar_id)
+
+        connection = self._engine.connect()
+
+        if connection.execute(_select).fetchone()[0] == user_id:
+            connection.close()
+            return 3
+
+        _select = select([self._shares.c.write_permission]).where(and_(self._shares.c.calendar_id == calendar_id,
+                                                                       self._shares.c.user_id == user_id))
+
+        result = connection.execute(_select)
+        connection.close()
+
+        if result.rowcount > 0:
+            return 2 if result.fetchone()[0] else 1
+        else:
+            return 0
+
+    def get_calendar_events(self, calendar_id):
+        _select = select([self._events.c.event_id, self._events.c.event_name, self._events.c.start_time,
+                          self._events.c.end_time, self._events.c.event_timezone, self._events.c.all_day_event]). \
+            where(self._events.c.calendar_id == calendar_id)
+
+        return self._fetch_many_select(_select, lambda r: {"event_id": r[0], "event_name": r[1], "start_time": r[2],
+                                                           "end_time": r[3], "event_timezone": r[4],
+                                                           "all_day_event": r[5]})
+
+    def get_invites(self, user_id, archive=False):
+        # TODO timezones!
+        _or_clause = or_(self._events.c.end_time > datetime.utcnow() if not archive else \
+                             self._events.c.end_time < datetime.utcnow(),
+                         self._invites.c.own_end_time > datetime.utcnow() if not archive else \
+                             self._invites.c.own_end_time > datetime.utcnow())
+        # TODO columns!
+        _select = select([self._events.c.event_id, self._events.c.event_name, self._events.c.start_time,
+                          self._events.c.end_time, self._events.c.event_timezone, self._events.c.all_day_event,
+                          self._invites.c.invite_id, self._invites.c.is_owner, self._invites.c.has_edited,
+                          self._invites.c.own_name,self._invites.c.own_start_time, self._invites.c.own_end_time,
+                          self._invites.c.own_all_day_event, self._invites.c.attendance_status]).\
+            select_from(self._events.join(self._invites)).where(
+            and_(self._invites.c.user_id == user_id, _or_clause))
+
+        # TODO timezones in invites...
+        return self._fetch_many_select(_select,
+                                       lambda r: {"event_id": r[0],
+                                                  "event_name": r[9] if r[8] and r[9] is not None else r[1],
+                                                  "start_time": r[10] if r[8] and r[10] is not None else r[2],
+                                                  "end_time": r[11] if r[8] and r[11] is not None else r[3],
+                                                  "timezone": r[4],
+                                                  "all_day": r[12] if r[8] and r[12] is not None else r[5],
+                                                  "invite_id": r[6],
+                                                  "is_owner": r[7],
+                                                  "attendance": r[13]})
