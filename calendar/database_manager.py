@@ -3,7 +3,8 @@ import hashlib
 from sqlalchemy import create_engine, Table, Column, Integer, DateTime, String, MetaData, ForeignKey, Boolean
 from sqlalchemy_utils import create_database, database_exists
 
-from .config import server_type, server_url, user, password, database_name, debug
+from .config import server_type, server_url, db_user, db_password, database_name, debug
+from .var_utils import get_password_hash
 
 
 class DatabaseManager:
@@ -21,7 +22,7 @@ class DatabaseManager:
         self._users = Table('users', metadata,
                             Column('user_id', Integer, primary_key=True),
                             Column('username', String(30), unique=True),
-                            Column('password', String(256)),
+                            Column('password', String(64)),
                             Column('own_timezone', Integer))
 
         self._calendars = Table('calendars', metadata,
@@ -49,6 +50,7 @@ class DatabaseManager:
         self._invites = Table('invites', metadata,
                               Column('invite_id', Integer, primary_key=True),
                               Column('event_id', Integer, ForeignKey('events.event_id')),
+                              Column('user_id', Integer, ForeignKey('users.user_id')),
                               Column('is_owner', Boolean, default=False),
                               Column('has_edited', Boolean, default=False),
                               Column('own_name', String(30), nullable=True),
@@ -62,9 +64,47 @@ class DatabaseManager:
             metadata.create_all(self._engine)
 
     def _get_engine(self):
-        return create_engine("{type}://{user}:{pswd}@{host}/{name}".format(type=server_type, user=user, pswd=password,
+        return create_engine("{type}://{user}:{pswd}@{host}/{name}".format(type=server_type, user=db_user, pswd=db_password,
                                                                            host=server_url, name=database_name),
                              encoding='utf8', echo=debug)
 
-    def create_user(self):
-        pass
+    def _execute_single_insert(self, _insert):
+        connection = self._engine.connect()
+
+        result = connection.execute(_insert)
+
+        connection.close()
+
+        return result.inserted_primary_key[0]
+
+    def add_user(self, username, password, own_timezone):
+        _insert = self._users.insert().values(username=username, password=get_password_hash(password),
+                                              own_timezone=own_timezone)
+
+        self._execute_single_insert(_insert)
+
+    def add_calendar(self, owner_id, calendar_name, calendar_color):
+        _insert = self._calendars.insert().values(owner_id=owner_id, calendar_name=calendar_name,
+                                                  calendar_color=calendar_color)
+
+        self._execute_single_insert(_insert)
+
+    def add_event(self, calendar_id, event_name, event_description, start_time, end_time, event_timezone,
+                  all_day_event):
+        _insert = self._events.insert().values(calendar_id=calendar_id, event_name=event_name,
+                                               event_description=event_description, start_time=start_time,
+                                               end_time=end_time, event_timezone=event_timezone,
+                                               all_day_event=all_day_event)
+
+        self._execute_single_insert(_insert)
+
+    def add_share(self, calendar_id, user_id, write_permission):
+        _insert = self._shares.insert().values(calendar_id=calendar_id, user_id=user_id,
+                                               write_permission=write_permission)
+
+        self._execute_single_insert(_insert)
+
+    def add_invite(self, event_id, user_id):
+        _insert = self._invites.insert().values(event_id=event_id, user_id=user_id)
+
+        self._execute_single_insert(_insert)
