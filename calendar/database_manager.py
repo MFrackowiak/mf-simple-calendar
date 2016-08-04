@@ -106,7 +106,7 @@ class DatabaseManager:
 
         connection.close()
 
-        return map(mapping, result) if mapping is not None else result
+        return list(map(mapping, result)) if mapping is not None else result  # 3.4!
 
     def add_user(self, username, password, own_timezone):
         _insert = self._users.insert().values(username=username, password=get_password_hash(password),
@@ -153,14 +153,16 @@ class DatabaseManager:
                                                            "tz": r[3]})
 
     def get_user_calendars(self, user_id):
-        _select = self._calendars.select(self._calendars.c.user_id == user_id)
+        _select = self._calendars.select(self._calendars.c.owner_id == user_id)
 
         own_calendars = self._fetch_many_select(_select, lambda r: {"calendar_id": r[0], "calendar_name": r[2],
                                                                     "calendar_color": r[3]})
 
         _select = select([self._users.c.username, self._calendars.c.calendar_id, self._calendars.c.calendar_name,
                           self._calendars.c.calendar_color, self._shares.c.write_permission]).select_from(
-            self._users.join(self._calendars.join(self._shares.select(self._shares.c.user_id == user_id))))
+            self._users.join(self._calendars.join(self._shares.select(self._shares.c.user_id == user_id),
+                                                  self._calendars.c.calendar_id == self._shares.c.calendar_id),
+                             self._users.c.user_id == self._calendars.c.owner_id))
 
         shared_calendars = self._fetch_many_select(_select, lambda r: {"owner": r[0], "calendar_id": r[1],
                                                                        "calendar_name": r[2], "calendar_color": r[3],
@@ -203,7 +205,7 @@ class DatabaseManager:
                              self._events.c.end_time < datetime.utcnow(),
                          self._invites.c.own_end_time > datetime.utcnow() if not archive else \
                              self._invites.c.own_end_time > datetime.utcnow())
-        # TODO columns!
+
         _select = select([self._events.c.event_id, self._events.c.event_name, self._events.c.start_time,
                           self._events.c.end_time, self._events.c.event_timezone, self._events.c.all_day_event,
                           self._invites.c.invite_id, self._invites.c.is_owner, self._invites.c.has_edited,
