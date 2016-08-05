@@ -51,7 +51,8 @@ class DatabaseManager:
                              Column('calendar_id', Integer, ForeignKey('calendars.calendar_id', ondelete='CASCADE'),
                                     nullable=False),
                              Column('user_id', Integer, ForeignKey('users.user_id'), nullable=False),
-                             Column('write_permission', Boolean, nullable=False))
+                             Column('write_permission', Boolean, nullable=False),
+                             UniqueConstraint('calendar_id', 'user_id', name='unique_shares'))
 
         self._invites = Table('invites', metadata,
                               Column('invite_id', Integer, primary_key=True),
@@ -175,8 +176,8 @@ class DatabaseManager:
         print(_select)
 
         shared_calendars = self._fetch_many_select(_select, lambda r: {"owner": r[0], "calendar_id": r[1],
-                                                                      "calendar_name": r[2], "calendar_color": r[3],
-                                                                      "write_permission": r[4]})
+                                                                       "calendar_name": r[2], "calendar_color": r[3],
+                                                                       "write_permission": r[4]})
 
         return {"my_calendars": own_calendars, "shared_with_me": shared_calendars}
 
@@ -235,3 +236,42 @@ class DatabaseManager:
                                                   "invite_id": r[6],
                                                   "is_owner": r[7],
                                                   "attendance": r[13]})
+
+    def update_calendar(self, calendar_id, calendar_name, calendar_color):
+        pass
+
+    def update_event(self, event_id, event_name, event_description, start_time, end_time, event_timezone,
+                     all_day_event):
+        pass
+
+    def get_user_shares(self, user_id):
+        _filtered_calendars = alias(select([self._calendars.c.calendar_name, self._calendars.c.calendar_color,
+                                            self._calendars.c.calendar_id]).
+                                    where(self._calendars.c.owner_id == user_id), "fc")
+        _select = select([self._shares.c.share_id, self._shares.c.calendar_id, self._shares.c.user_id,
+                          self._users.c.username, _filtered_calendars.c.calendar_name,
+                          _filtered_calendars.c.calendar_color, self._shares.c.write_permission]). \
+            select_from(self._shares.join(_filtered_calendars).join(self._users))
+
+        return self._fetch_many_select(_select, lambda r: {"share_id": r[0], "calendar_name": r[4],
+                                                           "calendar_color": r[5], "write_permission": r[6],
+                                                           "shared_with": r[3]})
+
+    def update_share(self, share_id, write_permission):
+        pass
+
+    def update_invite_description(self, user_id, invite_id, own_name, own_description, own_start_time, own_end_time,
+                                  own_all_day_event):
+        pass
+
+    def update_invite_attendance(self, user_id, invite_id, attendance):
+        pass
+
+    def delete_calendar(self, calendar_id):
+        pass
+
+    def delete_event(self, event_id):
+        pass
+
+    def delete_share(self, share_id):
+        pass

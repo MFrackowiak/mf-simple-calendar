@@ -64,3 +64,5 @@ if __name__ == '__main__':
 
     invites = db_manager.get_invites(1, archive=False)
     print(invites)
+
+    print(db_manager.get_user_shares(2))
