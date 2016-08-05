@@ -88,6 +88,15 @@ class DatabaseManager:
 
         return result.inserted_primary_key[0]
 
+    def _execute_single_update_delete(self, _query):
+        connection = self._engine.connect()
+
+        result = connection.execute(_query)
+
+        connection.close()
+
+        return result.rowcount == 1
+
     def _fetch_single_select(self, _select, mapping=None):
         connection = self._engine.connect()
 
@@ -238,11 +247,18 @@ class DatabaseManager:
                                                   "attendance": r[13]})
 
     def update_calendar(self, calendar_id, calendar_name, calendar_color):
-        pass
+        _update = self._calendars.update().where(self._calendars.c.calendar_id == calendar_id).\
+            values(calendar_name=calendar_name, calendar_color=calendar_color)
+
+        return self._execute_single_update_delete(_update)
 
     def update_event(self, event_id, event_name, event_description, start_time, end_time, event_timezone,
                      all_day_event):
-        pass
+        _update = self._events.update().where(self._events.c.event_id == event_id).\
+            values(event_name=event_name, event_description=event_description, start_time=start_time, end_time=end_time,
+                   event_timezone=event_timezone, all_day_event=all_day_event)
+
+        return self._execute_single_update_delete(_update)
 
     def get_user_shares(self, user_id):
         _filtered_calendars = alias(select([self._calendars.c.calendar_name, self._calendars.c.calendar_color,
@@ -258,20 +274,46 @@ class DatabaseManager:
                                                            "shared_with": r[3]})
 
     def update_share(self, share_id, write_permission):
-        pass
+        _update = self._shares.update().where(self._shares.c.share_id == share_id).\
+            values(write_permission=write_permission)
+
+        return self._execute_single_update_delete(_update)
 
     def update_invite_description(self, user_id, invite_id, own_name, own_description, own_start_time, own_end_time,
                                   own_all_day_event):
-        pass
+        _update = self._invites.update().where(and_(self._invites.c.invite_id == invite_id,
+                                                    self._invites.c.user_id == user_id)).\
+            values(own_name=own_name, own_description=own_description, own_start_time=own_start_time,
+                   own_end_time=own_end_time, own_all_day_event=own_all_day_event, has_edited=True)
+
+        return self._execute_single_update_delete(_update)
+
+    def restore_default_event_data(self, user_id, invite_id):
+        _update = self._invites.update().where(and_(self._invites.c.invite_id == invite_id,
+                                                    self._invites.c.user_id == user_id)). \
+            values(own_name=None, own_description=None, own_start_time=None, own_end_time=None, own_all_day_event=None,
+                   has_edited=False)
+
+        return self._execute_single_update_delete(_update)
 
     def update_invite_attendance(self, user_id, invite_id, attendance):
-        pass
+        _update = self._invites.update().where(and_(self._invites.c.invite_id == invite_id,
+                                                    self._invites.c.user_id == user_id)).\
+            values(attendance=attendance)
+
+        return self._execute_single_update_delete(_update)
 
     def delete_calendar(self, calendar_id):
-        pass
+        _delete = self._calendars.delete().where(self._calendars.c.calendar_id == calendar_id)
+
+        return self._execute_single_update_delete(_delete)
 
     def delete_event(self, event_id):
-        pass
+        _delete = self._events.delete().where(self._events.c.event_id == event_id)
+
+        return self._execute_single_update_delete(_delete)
 
     def delete_share(self, share_id):
-        pass
+        _delete = self._shares.delete().where(self._shares.c.share_id == share_id)
+
+        return self._execute_single_update_delete(_delete)

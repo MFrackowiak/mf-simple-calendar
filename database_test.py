@@ -65,4 +65,6 @@ if __name__ == '__main__':
     invites = db_manager.get_invites(1, archive=False)
     print(invites)
 
-    print(db_manager.get_user_shares(2))
+    shares = db_manager.get_user_shares(2)
+
+    print(db_manager.update_share(shares[0]['share_id'], False if shares[0]['write_permission'] else True))
