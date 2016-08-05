@@ -68,3 +68,13 @@ if __name__ == '__main__':
     shares = db_manager.get_user_shares(2)
 
     print(db_manager.update_share(shares[0]['share_id'], False if shares[0]['write_permission'] else True))
+
+    ev = db_manager.get_calendar_events(db_manager.get_user_calendars(2)['my_calendars'][0]['calendar_id'])[0]
+    print(ev)
+
+    print(db_manager.update_event(ev['event_id'], ev['event_name'] + 'u', ev['event_description'] + 'u',
+                                  ev['start_time'] + timedelta(seconds=60), ev['end_time'] + timedelta(seconds=60),
+                                  ev['event_timezone'], ev['all_day_event']))
+
+    ev = db_manager.get_calendar_events(db_manager.get_user_calendars(2)['my_calendars'][0]['calendar_id'])[0]
+    print(ev)

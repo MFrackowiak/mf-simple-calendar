@@ -175,14 +175,10 @@ class DatabaseManager:
                                      self._calendars.c.calendar_id == self._shares.c.calendar_id)).where(
                 self._shares.c.user_id == user_id), "sc")
 
-        print(_alias)
-
         _select = select([self._users.c.username, _alias.c.calendar_id, _alias.c.calendar_name,
                           _alias.c.calendar_color, _alias.c.write_permission]).select_from(
             self._users.join(_alias,
                              self._users.c.user_id == _alias.c.owner_id))
-
-        print(_select)
 
         shared_calendars = self._fetch_many_select(_select, lambda r: {"owner": r[0], "calendar_id": r[1],
                                                                        "calendar_name": r[2], "calendar_color": r[3],
@@ -212,12 +208,13 @@ class DatabaseManager:
 
     def get_calendar_events(self, calendar_id):
         _select = select([self._events.c.event_id, self._events.c.event_name, self._events.c.start_time,
-                          self._events.c.end_time, self._events.c.event_timezone, self._events.c.all_day_event]). \
+                          self._events.c.end_time, self._events.c.event_timezone, self._events.c.all_day_event,
+                          self._events.c.event_description]). \
             where(self._events.c.calendar_id == calendar_id)
 
         return self._fetch_many_select(_select, lambda r: {"event_id": r[0], "event_name": r[1], "start_time": r[2],
                                                            "end_time": r[3], "event_timezone": r[4],
-                                                           "all_day_event": r[5]})
+                                                           "all_day_event": r[5], "event_description": r[6]})
 
     def get_invites(self, user_id, archive=False):
         # TODO timezones!
