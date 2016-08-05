@@ -1,7 +1,7 @@
 import hashlib
 
 from sqlalchemy import create_engine, Table, Column, Integer, DateTime, String, MetaData, ForeignKey, Boolean, \
-    UniqueConstraint, select, join
+    UniqueConstraint, select, alias
 from sqlalchemy.sql import and_, or_
 from sqlalchemy_utils import create_database, database_exists
 from datetime import datetime
@@ -158,15 +158,25 @@ class DatabaseManager:
         own_calendars = self._fetch_many_select(_select, lambda r: {"calendar_id": r[0], "calendar_name": r[2],
                                                                     "calendar_color": r[3]})
 
-        _select = select([self._users.c.username, self._calendars.c.calendar_id, self._calendars.c.calendar_name,
-                          self._calendars.c.calendar_color, self._shares.c.write_permission]).select_from(
-            self._users.join(self._calendars.join(self._shares.select(self._shares.c.user_id == user_id),
-                                                  self._calendars.c.calendar_id == self._shares.c.calendar_id),
-                             self._users.c.user_id == self._calendars.c.owner_id))
+        _alias = alias(
+            select([self._calendars.c.calendar_id, self._calendars.c.calendar_name, self._calendars.c.owner_id,
+                    self._calendars.c.calendar_color, self._shares.c.write_permission]).select_from(
+                self._calendars.join(self._shares,
+                                     self._calendars.c.calendar_id == self._shares.c.calendar_id)).where(
+                self._shares.c.user_id == user_id), "sc")
+
+        print(_alias)
+
+        _select = select([self._users.c.username, _alias.c.calendar_id, _alias.c.calendar_name,
+                          _alias.c.calendar_color, _alias.c.write_permission]).select_from(
+            self._users.join(_alias,
+                             self._users.c.user_id == _alias.c.owner_id))
+
+        print(_select)
 
         shared_calendars = self._fetch_many_select(_select, lambda r: {"owner": r[0], "calendar_id": r[1],
-                                                                       "calendar_name": r[2], "calendar_color": r[3],
-                                                                       "write_permission": r[4]})
+                                                                      "calendar_name": r[2], "calendar_color": r[3],
+                                                                      "write_permission": r[4]})
 
         return {"my_calendars": own_calendars, "shared_with_me": shared_calendars}
 
@@ -201,20 +211,20 @@ class DatabaseManager:
 
     def get_invites(self, user_id, archive=False):
         # TODO timezones!
-        _or_clause = or_(self._events.c.end_time > datetime.utcnow() if not archive else \
+        _or_clause = or_(self._events.c.end_time > datetime.utcnow() if not archive else
                              self._events.c.end_time < datetime.utcnow(),
-                         self._invites.c.own_end_time > datetime.utcnow() if not archive else \
+                         self._invites.c.own_end_time > datetime.utcnow() if not archive else
                              self._invites.c.own_end_time > datetime.utcnow())
 
         _select = select([self._events.c.event_id, self._events.c.event_name, self._events.c.start_time,
                           self._events.c.end_time, self._events.c.event_timezone, self._events.c.all_day_event,
                           self._invites.c.invite_id, self._invites.c.is_owner, self._invites.c.has_edited,
-                          self._invites.c.own_name,self._invites.c.own_start_time, self._invites.c.own_end_time,
-                          self._invites.c.own_all_day_event, self._invites.c.attendance_status]).\
+                          self._invites.c.own_name, self._invites.c.own_start_time, self._invites.c.own_end_time,
+                          self._invites.c.own_all_day_event, self._invites.c.attendance_status]). \
             select_from(self._events.join(self._invites)).where(
             and_(self._invites.c.user_id == user_id, _or_clause))
 
-        # TODO timezones in invites...
+        # TODO timezones in invites...?
         return self._fetch_many_select(_select,
                                        lambda r: {"event_id": r[0],
                                                   "event_name": r[9] if r[8] and r[9] is not None else r[1],
