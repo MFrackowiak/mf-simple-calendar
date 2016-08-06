@@ -15,6 +15,7 @@ if __name__ == '__main__':
     test_add_simple = False
     test_shares = False
     test_invites = False
+    test_deletes = False
 
     if test_add_simple:
         users = {}
@@ -63,7 +64,9 @@ if __name__ == '__main__':
     print(db_manager.get_user_data("TestUser2"))
 
     invites = db_manager.get_invites(1, archive=False)
+    print("INVITES")
     print(invites)
+    print("INVITES")
 
     shares = db_manager.get_user_shares(2)
 
@@ -78,3 +81,51 @@ if __name__ == '__main__':
 
     ev = db_manager.get_calendar_events(db_manager.get_user_calendars(2)['my_calendars'][0]['calendar_id'])[0]
     print(ev)
+
+    invite = invites[0]
+    print(invite)
+
+    db_manager.update_invite_attendance(1, invite['invite_id'], 1)
+    print(db_manager.get_invites(1, False)[0])
+
+    db_manager.update_invite_description(1, invite['invite_id'], None, "This is changed event desc",
+                                         invite['start_time'] + timedelta(seconds=7200),
+                                         invite['end_time'] + timedelta(seconds=7200),
+                                         None)
+
+    print(db_manager.get_invites(1, False)[0])
+
+    db_manager.restore_default_event_data(1, invite['invite_id'])
+
+    print(db_manager.get_invites(1, False)[0])
+
+    if test_deletes:
+        u = db_manager.add_user("TestUserDeleting", "123451235", 5)
+
+        c = db_manager.add_calendar(u, "ToDeleteCalendar", "Pink")
+        e = []
+
+        for a in range(5):
+            e.append(db_manager.add_event(c, "TD1", "TD1d", datetime.utcnow() + timedelta(seconds=3600),
+                                          datetime.utcnow() + timedelta(seconds=6000), 0, False))
+
+            db_manager.add_invite(e[-1], 1)
+
+        s = db_manager.add_share(c, 1, 0)
+
+        print(db_manager.get_user_calendars(1))
+        print(db_manager.get_invites(1))
+
+        for a in range(2):
+            db_manager.delete_event(e[a])
+
+        print(db_manager.get_invites(1))
+
+        print(db_manager.delete_share(s))
+
+        print(db_manager.get_user_calendars(1))
+        print(db_manager.get_calendar_events(c))
+
+        db_manager.delete_calendar(c)
+
+        print(db_manager.get_user_calendars(u))

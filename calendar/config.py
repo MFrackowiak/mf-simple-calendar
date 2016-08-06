@@ -4,7 +4,7 @@ db_user = "TestUser"
 db_password = "SafePassword"
 database_name = "calendar-db"
 
-debug = True
+debug = False
 
 salt_1 = "ccsimplecalendarmf"
 salt_2 = "mfsimplecalendarcc"

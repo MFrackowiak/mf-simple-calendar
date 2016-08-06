@@ -227,7 +227,8 @@ class DatabaseManager:
                           self._events.c.end_time, self._events.c.event_timezone, self._events.c.all_day_event,
                           self._invites.c.invite_id, self._invites.c.is_owner, self._invites.c.has_edited,
                           self._invites.c.own_name, self._invites.c.own_start_time, self._invites.c.own_end_time,
-                          self._invites.c.own_all_day_event, self._invites.c.attendance_status]). \
+                          self._invites.c.own_all_day_event, self._invites.c.attendance_status,
+                          self._events.c.event_description, self._invites.c.own_description]). \
             select_from(self._events.join(self._invites)).where(
             and_(self._invites.c.user_id == user_id, _or_clause))
 
@@ -241,7 +242,8 @@ class DatabaseManager:
                                                   "all_day": r[12] if r[8] and r[12] is not None else r[5],
                                                   "invite_id": r[6],
                                                   "is_owner": r[7],
-                                                  "attendance": r[13]})
+                                                  "attendance": r[13],
+                                                  "description": r[15] if r[8] and r[15] is not None else r[14]})
 
     def update_calendar(self, calendar_id, calendar_name, calendar_color):
         _update = self._calendars.update().where(self._calendars.c.calendar_id == calendar_id).\
@@ -296,7 +298,7 @@ class DatabaseManager:
     def update_invite_attendance(self, user_id, invite_id, attendance):
         _update = self._invites.update().where(and_(self._invites.c.invite_id == invite_id,
                                                     self._invites.c.user_id == user_id)).\
-            values(attendance=attendance)
+            values(attendance_status=attendance)
 
         return self._execute_single_update_delete(_update)
 
@@ -314,3 +316,11 @@ class DatabaseManager:
         _delete = self._shares.delete().where(self._shares.c.share_id == share_id)
 
         return self._execute_single_update_delete(_delete)
+
+    def get_event(self, event_id):
+        _select = self._events.select(self._events.c.event_id == event_id)
+
+        return self._fetch_single_select(_select, lambda r: {'event_id': r[0], 'event_name': r[2],
+                                                             'event_description': r[3], 'start_time': r[4],
+                                                             'end_time': r[5], 'event_timezone': r[6],
+                                                             'all_day_event': r[7]})
