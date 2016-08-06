@@ -325,3 +325,8 @@ class DatabaseManager:
                                                              'event_description': r[3], 'start_time': r[4],
                                                              'end_time': r[5], 'event_timezone': r[6],
                                                              'all_day_event': r[7]})
+
+    def get_calendar_id_for_event(self, event_id):
+        _select = select([self._events.c.calendar_id]).where(self._events.c.event_id == event_id)
+
+        return self._fetch_single_select(_select, lambda r: r[0])
