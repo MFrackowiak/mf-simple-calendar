@@ -3,6 +3,8 @@
 General assumptions
 -------------------
 
+Date/time is saved in database in utc timezone. Timezone info is saved additionally.
+
 Error codes
 -----------
 

@@ -129,3 +129,9 @@ if __name__ == '__main__':
         db_manager.delete_calendar(c)
 
         print(db_manager.get_user_calendars(u))
+
+    events = db_manager.get_calendar_events(db_manager.get_user_calendars(2)['my_calendars'][0]['calendar_id'])
+
+    for e in events:
+        a = str(e['start_time'])
+        print(a)

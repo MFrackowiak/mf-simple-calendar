@@ -10,6 +10,7 @@ from .var_utils import get_password_hash
 class Calendar:
     def __init__(self):
         self._db = DatabaseManager(False)
+        self._success = {'success': True}
 
     def _can_read_calendar(self, user_id, calendar_id):
         return self._db.get_user_calendar_privilege(user_id, calendar_id) > 0
@@ -126,8 +127,23 @@ class Calendar:
             return self._error_dict(2, "Database error. Contact administrator.")
 
     def edit_calendar(self, user_id, calendar_id, calendar_name, calendar_color):
-        pass
+        if not self._can_edit_calendar(user_id, calendar_id):
+            return self._error_dict(3, "Calendar edit permission required to perform this action.")
+
+        try:
+            if self._db.update_calendar(calendar_id, calendar_name, calendar_color):
+                return self._success
+            else:
+                pass
+                # TODO w jakich warunkach?
+        except Exception:
+            return self._error_dict(2, "Database error. Contact administrator.")
 
     def edit_event(self, user_id, event_id, event_name, event_description, start_time, end_time, event_timezone,
                    all_day_event):
+        if not self._can_edit_calendar(user_id, self._db.get_calendar_id_for_event(event_id)):
+            return self._error_dict(3, "Calendar edit permission is required to edit its events.")
+
         pass
+
+calendar_app = Calendar()

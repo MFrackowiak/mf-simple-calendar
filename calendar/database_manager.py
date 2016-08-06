@@ -7,7 +7,7 @@ from sqlalchemy_utils import create_database, database_exists
 from datetime import datetime
 
 from .config import server_type, server_url, db_user, db_password, database_name, debug
-from .var_utils import get_password_hash
+from .var_utils import get_password_hash, set_utc
 
 
 class DatabaseManager:
@@ -213,9 +213,10 @@ class DatabaseManager:
                           self._events.c.event_description]). \
             where(self._events.c.calendar_id == calendar_id)
 
-        return self._fetch_many_select(_select, lambda r: {"event_id": r[0], "event_name": r[1], "start_time": r[2],
-                                                           "end_time": r[3], "event_timezone": r[4],
-                                                           "all_day_event": r[5], "event_description": r[6]})
+        return self._fetch_many_select(_select, lambda r: {"event_id": r[0], "event_name": r[1],
+                                                           "start_time": set_utc(r[2]), "end_time": set_utc(r[3]),
+                                                           "event_timezone": r[4], "all_day_event": r[5],
+                                                           "event_description": r[6]})
 
     def get_invites(self, user_id, archive=False):
         # TODO timezones!
@@ -237,8 +238,8 @@ class DatabaseManager:
         return self._fetch_many_select(_select,
                                        lambda r: {"event_id": r[0],
                                                   "event_name": r[9] if r[8] and r[9] is not None else r[1],
-                                                  "start_time": r[10] if r[8] and r[10] is not None else r[2],
-                                                  "end_time": r[11] if r[8] and r[11] is not None else r[3],
+                                                  "start_time": set_utc(r[10] if r[8] and r[10] is not None else r[2]),
+                                                  "end_time": set_utc(r[11] if r[8] and r[11] is not None else r[3]),
                                                   "timezone": r[4],
                                                   "all_day": r[12] if r[8] and r[12] is not None else r[5],
                                                   "invite_id": r[6],
@@ -322,8 +323,8 @@ class DatabaseManager:
         _select = self._events.select(self._events.c.event_id == event_id)
 
         return self._fetch_single_select(_select, lambda r: {'event_id': r[0], 'event_name': r[2],
-                                                             'event_description': r[3], 'start_time': r[4],
-                                                             'end_time': r[5], 'event_timezone': r[6],
+                                                             'event_description': r[3], 'start_time': set_utc(r[4]),
+                                                             'end_time': set_utc(r[5]), 'event_timezone': r[6],
                                                              'all_day_event': r[7]})
 
     def get_calendar_id_for_event(self, event_id):
