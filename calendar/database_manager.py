@@ -26,7 +26,8 @@ class DatabaseManager:
                             Column('user_id', Integer, primary_key=True),
                             Column('username', String(30), unique=True, nullable=False),
                             Column('password', String(64), nullable=False),
-                            Column('own_timezone', Integer, nullable=False))
+                            Column('own_timezone', Integer, nullable=False),
+                            UniqueConstraint('username', name='unique_username'))
 
         self._calendars = Table('calendars', metadata,
                                 Column('calendar_id', Integer, primary_key=True),
@@ -145,8 +146,8 @@ class DatabaseManager:
 
         return self._execute_single_insert(_insert)
 
-    def add_invite(self, event_id, user_id):
-        _insert = self._invites.insert().values(event_id=event_id, user_id=user_id)
+    def add_invite(self, event_id, user_id, is_owner=False):
+        _insert = self._invites.insert().values(event_id=event_id, user_id=user_id, is_owner=is_owner)
 
         return self._execute_single_insert(_insert)
 
