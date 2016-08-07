@@ -1,10 +1,10 @@
 import webcolors
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.exc import IntegrityError
 
 from .database_manager import DatabaseManager
-from .var_utils import get_password_hash
+from .var_utils import get_password_hash, set_utc
 
 
 class Calendar:
@@ -26,6 +26,56 @@ class Calendar:
 
     def _success_dict(self, key, value):
         return {'success': True, key: value}
+
+    def _parse_date_to_utc(self, start_time, end_time, timezone_delta):
+        if timezone_delta is None:
+            s = datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S %z")
+            e = datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S %z")
+
+            if s.tzinfo.utcoffset() != s.tzinfo.utcoffset():
+                raise ValueError("Start time and end time must have same timezone.")
+
+            timezone_delta = int(s.tzinfo.utcoffset() / 60)
+        else:
+            s = datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S").replace(
+                tzinfo=timezone(timedelta(hours=timezone_delta)))
+            e = datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S").replace(
+                tzinfo=timezone(timedelta(hours=timezone_delta)))
+
+        if timezone_delta == 0:
+            return s, e, timezone_delta
+        else:
+            return self._convert_date_to_tz(s, e, 0) + (timezone_delta,)
+
+    def _parse_all_day_event(self, start_time, timezone_delta):
+        if timezone_delta is None:
+            s = datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S %z").replace(hour=0, minute=0, second=0)
+            e = s + timedelta(days=1)
+
+            timezone_delta = int(s.tzinfo.utcoffset() / 60)
+        else:
+            s = datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S").replace(hour=0, minute=0, second=0, tzinfo=timezone(
+                timedelta(hours=timezone_delta)))
+            e = s + timedelta(days=1)
+
+        if timezone_delta == 0:
+            return s, e, timezone_delta
+        else:
+            return self._convert_date_to_tz(s, e, 0) + (timezone_delta,)
+
+    def _convert_all_day_event_date_to_tz(self, start_time, original_timezone, timezone_delta):
+        if start_time.tzinfo is None:
+            set_utc(start_time)
+
+    def _convert_date_to_tz(self, start_time, end_time, timezone_delta):
+        if start_time.tzinfo is None:
+            set_utc(start_time)
+
+        if end_time.tzinfo is None:
+            set_utc(end_time)
+
+        return start_time.astimezone(timezone(timedelta(timezone_delta))), \
+               end_time.astimezone(timezone(timedelta(timezone_delta)))
 
     def authorize_user(self, username, password):
         username = username.strip()
@@ -98,7 +148,10 @@ class Calendar:
         if all_day_event:
             pass
         else:
-            pass
+            start_time, end_time, event_timezone = self._parse_date_to_utc(start_time, end_time, event_timezone)
+
+            if start_time > end_time:
+                return self._error_dict(1, "Event cannot end before it started.")
 
         try:
             return self._success_dict('event_id', self._db.add_event(calendar_id, event_name, event_description,
@@ -166,7 +219,7 @@ class Calendar:
         try:
             return self._success_dict('invites', self._db.get_invites(user_id, archive))
         except Exception:
-            return  self._error_dict(2, "Database error. Contact administrator.")
+            return self._error_dict(2, "Database error. Contact administrator.")
 
 
 calendar_app = Calendar()
