@@ -1,4 +1,4 @@
-from calendar.database_manager import DatabaseManager
+from calendar_app.database_manager import DatabaseManager
 from datetime import datetime, timedelta
 
 import random

@@ -1,4 +1,4 @@
-from calendar.calendar import Calendar
+from calendar_app.calendar import Calendar
 
 
 if __name__ == '__main__':

@@ -73,7 +73,7 @@ class Calendar:
         try:
             webcolors.name_to_hex(calendar_color)
         except ValueError:
-            return self._error_dict(1, "Unknown calendar color.")
+            return self._error_dict(1, "Unknown calendar_app color.")
 
         try:
             return self._success_dict('calendar_id', self._db.add_calendar(user_id, calendar_name, calendar_color))
@@ -83,7 +83,7 @@ class Calendar:
     def add_event(self, user_id, calendar_id, event_name, event_description, start_time, end_time, event_timezone,
                   all_day_event):
         if not self._can_edit_calendar(user_id, calendar_id):
-            return self._error_dict(3, "You have no edit permissions for given calendar.")
+            return self._error_dict(3, "You have no edit permissions for given calendar_app.")
 
         event_name = event_name.strip()
         event_description = event_description.strip()
@@ -109,7 +109,7 @@ class Calendar:
 
     def share_calendar(self, user_id, calendar_id, share_with_id, write_permission):
         if not self._calendar_owner(user_id, calendar_id):
-            return self._error_dict(3, "Only calendar owner can further share it.")
+            return self._error_dict(3, "Only calendar_app owner can further share it.")
 
         try:
             return self._success_dict('share_id', self._db.add_share(calendar_id, share_with_id, write_permission))
