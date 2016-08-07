@@ -144,6 +144,29 @@ class Calendar:
         if not self._can_edit_calendar(user_id, self._db.get_calendar_id_for_event(event_id)):
             return self._error_dict(3, "Calendar edit permission is required to edit its events.")
 
-        pass
+        event_name = event_name.strip()
+        event_description = event_description.strip()
+
+    def get_calendars(self, user_id):
+        try:
+            return self._success_dict('calendars', self._db.get_user_calendars(user_id))
+        except Exception:
+            return self._error_dict(2, "Database error. Contact administrator.")
+
+    def get_events(self, user_id, calendar_id):
+        if not self._can_read_calendar(user_id, calendar_id):
+            return self._error_dict(3, "Calendar read permission required to perform this action.")
+
+        try:
+            return self._success_dict('events', self._db.get_calendar_events(calendar_id))
+        except Exception:
+            return self._error_dict(2, "Database error. Contact administrator.")
+
+    def get_invites(self, user_id, archive=False):
+        try:
+            return self._success_dict('invites', self._db.get_invites(user_id, archive))
+        except Exception:
+            return  self._error_dict(2, "Database error. Contact administrator.")
+
 
 calendar_app = Calendar()
