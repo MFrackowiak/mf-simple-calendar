@@ -31,3 +31,5 @@ if __name__ == '__main__':
     res = requests.post('http://localhost:5000/test',
                         json={'date': datetime.utcnow().replace(tzinfo=timezone(timedelta(hours=2))).strftime(
                             "%Y-%m-%d %H:%M:%S"), 'tz': 2})
+    res = requests.get('http://localhost:5000/date')
+    print(res.json())

@@ -63,9 +63,17 @@ class Calendar:
         else:
             return self._convert_date_to_tz(s, e, 0) + (timezone_delta,)
 
-    def _convert_all_day_event_date_to_tz(self, start_time, original_timezone, timezone_delta):
+    def _convert_all_day_event_date_to_tz(self, start_time, original_timezone, user_timezone):
         if start_time.tzinfo is None:
             set_utc(start_time)
+
+        if abs(original_timezone - user_timezone) > 12:
+            if original_timezone > user_timezone:
+                start_time -= timedelta(days=1)
+            else:
+                start_time += timedelta(days=1)
+
+        return start_time, start_time + timedelta(days=1)
 
     def _convert_date_to_tz(self, start_time, end_time, timezone_delta):
         if start_time.tzinfo is None:
@@ -76,6 +84,21 @@ class Calendar:
 
         return start_time.astimezone(timezone(timedelta(timezone_delta))), \
                end_time.astimezone(timezone(timedelta(timezone_delta)))
+
+    def _event_as_user_event_timezone(self, event_dict, user_timezone):
+        if event_dict['all_day_event']:
+            event_dict['start_time'], event_dict['end_time'] = self._convert_all_day_event_date_to_tz(
+                event_dict['start_time'], event_dict['event_timezone'], user_timezone)
+        else:
+            event_dict['user_start_time'], event_dict['user_end_time'] = self._convert_date_to_tz(
+                event_dict['start_time'], event_dict['end_time'], user_timezone)
+            event_dict['start_time'], event_dict['end_time'] = self._convert_date_to_tz(event_dict['start_time'],
+                                                                                        event_dict['end_time'],
+                                                                                        event_dict['event_timezone'])
+
+        event_dict['user_timezone'] = user_timezone
+
+        return event_dict
 
     def authorize_user(self, username, password):
         username = username.strip()
@@ -144,9 +167,8 @@ class Calendar:
         if len(event_description) > 200:
             return self._error_dict(1, "Event description too long, it should contain up to 200 characters.")
 
-        # TODO how flask decode date?
         if all_day_event:
-            pass
+            start_time, end_time, event_timezone = self._parse_all_day_event(start_time, event_timezone)
         else:
             start_time, end_time, event_timezone = self._parse_date_to_utc(start_time, end_time, event_timezone)
 
@@ -206,12 +228,13 @@ class Calendar:
         except Exception:
             return self._error_dict(2, "Database error. Contact administrator.")
 
-    def get_events(self, user_id, calendar_id):
+    def get_events(self, user_id, user_timezone, calendar_id):
         if not self._can_read_calendar(user_id, calendar_id):
             return self._error_dict(3, "Calendar read permission required to perform this action.")
 
         try:
-            return self._success_dict('events', self._db.get_calendar_events(calendar_id))
+            return self._success_dict('events', list(map(lambda e: self._event_as_user_event_timezone(e, user_timezone),
+                                                         self._db.get_calendar_events(calendar_id))))
         except Exception:
             return self._error_dict(2, "Database error. Contact administrator.")
 

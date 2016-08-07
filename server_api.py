@@ -2,8 +2,10 @@ from datetime import datetime, timezone, timedelta
 from flask import Flask, jsonify, request
 
 from calendar_app.calendar import calendar_app
+from calendar_app.json_encoder import CustomJSONEncoder
 
 app = Flask(__name__)
+app.json_encoder = CustomJSONEncoder
 
 
 @app.route("/test", methods=['POST'])
@@ -20,6 +22,12 @@ def test_datetime_parse():
         print(d)
         print(d.astimezone(timezone(timedelta(hours=0))))
     return jsonify({'ok': True})
+
+
+@app.route("/date", methods=['GET'])
+def test_datetime_encode():
+    return jsonify({'date': datetime.utcnow().replace(tzinfo=timezone(timedelta(hours=2)))})
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
