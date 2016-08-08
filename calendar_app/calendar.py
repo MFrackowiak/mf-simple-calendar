@@ -333,6 +333,15 @@ class Calendar:
         except Exception as e:
             return self.error_dict(2, "Database error. Contact administrator.")
 
+    def get_invite(self, user_id, user_timezone, invite_id):
+        try:
+            return self.success_dict('invite', list(map(lambda e: self._event_as_user_event_timezone(e, user_timezone),
+                                                        self._db.get_invite(user_id, invite_id))))
+        except ValueError:
+            return self.error_dict(1, "Invite does not exist.")
+        except Exception as e:
+            return self.error_dict(2, "Database error. Contact administrator.")
+
     def edit_invite(self, user_id, invite_id, own_name, own_description, own_start, own_end, own_timezone,
                     own_all_day_event):
         try:
@@ -465,6 +474,12 @@ class Calendar:
 
         try:
             return self.success_dict("guests", self._db.get_event_guests(event_id))
+        except Exception:
+            return self.error_dict(2, "Database error. Contact administrator.")
+
+    def get_users(self, like_string):
+        try:
+            return self.success_dict("users_like", self._db.get_users_like(like_string))
         except Exception:
             return self.error_dict(2, "Database error. Contact administrator.")
 
