@@ -222,6 +222,27 @@ class Calendar:
         event_name = event_name.strip()
         event_description = event_description.strip()
 
+        if not 4 <= len(event_name) <= 30:
+            return self._error_dict(1, "Event name should have between 4 and 30 characters.")
+
+        if len(event_description) > 200:
+            return self._error_dict(1, "Event description too long, it should contain up to 200 characters.")
+
+        if all_day_event:
+            start_time, end_time, event_timezone = self._parse_all_day_event(start_time, event_timezone)
+        else:
+            start_time, end_time, event_timezone = self._parse_date_to_utc(start_time, end_time, event_timezone)
+
+            if start_time > end_time:
+                return self._error_dict(1, "Event cannot end before it started.")
+
+        try:
+            return self._success_dict('event_id', self._db.update_event(event_id, event_name, event_description,
+                                                                        start_time, end_time, event_timezone,
+                                                                        all_day_event))
+        except Exception:
+            return self._error_dict(2, "Database error. Contact administrator.")
+
     def get_calendars(self, user_id):
         try:
             return self._success_dict('calendars', self._db.get_user_calendars(user_id))
@@ -238,11 +259,23 @@ class Calendar:
         except Exception:
             return self._error_dict(2, "Database error. Contact administrator.")
 
+    def get_event(self, user_id, user_timezone, event_id):
+        if not self._can_read_calendar(user_id, self._db.get_calendar_id_for_event(event_id)):
+            return self._error_dict(3, "Calendar read permission required to perform this action.")
+
+        try:
+            return self._success_dict('event', self._event_as_user_event_timezone(self._db.get_event(event_id),
+                                                                                  user_timezone))
+        except Exception:
+            return self._error_dict(2, "Database error. Contact administrator.")
+
     def get_invites(self, user_id, archive=False):
         try:
             return self._success_dict('invites', self._db.get_invites(user_id, archive))
         except Exception:
             return self._error_dict(2, "Database error. Contact administrator.")
 
+    def edit_invite(self):
+        pass
 
 calendar_app = Calendar()

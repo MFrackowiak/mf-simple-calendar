@@ -1,5 +1,3 @@
-import hashlib
-
 from sqlalchemy import create_engine, Table, Column, Integer, DateTime, String, MetaData, ForeignKey, Boolean, \
     UniqueConstraint, select, alias
 from sqlalchemy.sql import and_, or_
