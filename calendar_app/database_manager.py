@@ -105,7 +105,7 @@ class DatabaseManager:
         connection.close()
 
         if result.rowcount < 1:
-            raise ValueError("Zadany rekord nie istnieje w bazie danych.")
+            raise ValueError("Given record does not exist in database.")
 
         return mapping(result.fetchone()) if mapping is not None else result.fetchone()
 
@@ -347,3 +347,22 @@ class DatabaseManager:
         _select = select([self._invites.c.event_id]).where(self._invites.c.invite_id == invite_id)
 
         return self._fetch_single_select(_select, lambda r: r[0])
+
+    def get_event_guests(self, event_id):
+        guests = {}
+
+        for attendance_status, attendance_id in zip(['unknown', 'no', 'maybe', 'yes'], range(0, 4)):
+            _alias = alias(select([self._invites.c.user_id]).where(
+                and_(self._invites.c.event_id == event_id, self._invites.c.attendance_status == attendance_id)))
+            _select = select([self._users.c.username]).select_from(self._users.join(_alias, _alias.c.user_id ==
+                                                                                    self._users.c.user_id))
+
+            guests[attendance_status] = self._fetch_many_select(_select, lambda r: r[0])
+
+        return guests
+
+    def get_invite_for_user_at_event(self, user_id, event_id):
+        _select = self._invites.select(and_(self._invites.c.user_id == user_id, self._invites.c.event_id == event_id))
+
+        return self._fetch_single_select(_select, lambda r: {'invite_id': r[0], 'is_owner': r[1], 'has_edited': r[2],
+                                                             'attendance': r[3]})

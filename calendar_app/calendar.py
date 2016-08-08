@@ -27,6 +27,13 @@ class Calendar:
     def _success_dict(self, key, value):
         return {'success': True, key: value}
 
+    def _is_invited(self, user_id, event_id):
+        try:
+            self._db.get_invite_for_user_at_event(user_id, event_id)
+            return True
+        except ValueError:
+            return False
+
     def _parse_date_to_utc(self, start_time, end_time, timezone_delta):
         if timezone_delta is None:
             s = datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S %z")
@@ -82,8 +89,8 @@ class Calendar:
         if end_time.tzinfo is None:
             set_utc(end_time)
 
-        return start_time.astimezone(timezone(timedelta(timezone_delta))), \
-               end_time.astimezone(timezone(timedelta(timezone_delta)))
+        return start_time.astimezone(timezone(timedelta(hours=timezone_delta))), \
+               end_time.astimezone(timezone(timedelta(hours=timezone_delta)))
 
     def _event_as_user_event_timezone(self, event_dict, user_timezone):
         if event_dict['all_day_event']:
@@ -146,7 +153,7 @@ class Calendar:
         try:
             webcolors.name_to_hex(calendar_color)
         except ValueError:
-            return self._error_dict(1, "Unknown calendar_app color.")
+            return self._error_dict(1, "Unknown calendar color.")
 
         try:
             return self._success_dict('calendar_id', self._db.add_calendar(user_id, calendar_name, calendar_color))
@@ -156,7 +163,10 @@ class Calendar:
     def add_event(self, user_id, calendar_id, event_name, event_description, start_time, end_time, event_timezone,
                   all_day_event):
         if not self._can_edit_calendar(user_id, calendar_id):
-            return self._error_dict(3, "You have no edit permissions for given calendar_app.")
+            return self._error_dict(3, "You have no edit permissions for given calendar.")
+
+        if None in [calendar_id, event_name, event_description, start_time, end_time, event_timezone, all_day_event]:
+            return self._error_dict(4, "Request malformed, all values must be provided")
 
         event_name = event_name.strip()
         event_description = event_description.strip()
@@ -167,13 +177,16 @@ class Calendar:
         if len(event_description) > 200:
             return self._error_dict(1, "Event description too long, it should contain up to 200 characters.")
 
-        if all_day_event:
-            start_time, end_time, event_timezone = self._parse_all_day_event(start_time, event_timezone)
-        else:
-            start_time, end_time, event_timezone = self._parse_date_to_utc(start_time, end_time, event_timezone)
+        try:
+            if all_day_event:
+                start_time, end_time, event_timezone = self._parse_all_day_event(start_time, event_timezone)
+            else:
+                start_time, end_time, event_timezone = self._parse_date_to_utc(start_time, end_time, event_timezone)
 
-            if start_time > end_time:
-                return self._error_dict(1, "Event cannot end before it started.")
+                if start_time > end_time:
+                    return self._error_dict(1, "Event cannot end before it started.")
+        except ValueError:
+            return self._error_dict(4, "Request malformed. Bad date format.")
 
         try:
             event_id = self._db.add_event(calendar_id, event_name, event_description, start_time, end_time,
@@ -187,10 +200,12 @@ class Calendar:
 
     def share_calendar(self, user_id, calendar_id, share_with_id, write_permission):
         if not self._calendar_owner(user_id, calendar_id):
-            return self._error_dict(3, "Only calendar_app owner can further share it.")
+            return self._error_dict(3, "Only calendar owner can further share it.")
 
         try:
             return self._success_dict('share_id', self._db.add_share(calendar_id, share_with_id, write_permission))
+        except IntegrityError:
+            return self._error_dict(1, "Calendar already shared with this user.")
         except Exception:
             return self._error_dict(2, "Database error. Contact administrator.")
 
@@ -201,7 +216,9 @@ class Calendar:
 
         try:
             return self._success_dict('invite_id', self._db.add_invite(event_id, invited_id, is_owner))
-        except Exception:
+        except IntegrityError:
+            return self._error_dict(1, "User already invited to this event.")
+        except Exception as e:
             return self._error_dict(2, "Database error. Contact administrator.")
 
     def edit_calendar(self, user_id, calendar_id, calendar_name, calendar_color):
@@ -231,13 +248,16 @@ class Calendar:
         if len(event_description) > 200:
             return self._error_dict(1, "Event description too long, it should contain up to 200 characters.")
 
-        if all_day_event:
-            start_time, end_time, event_timezone = self._parse_all_day_event(start_time, event_timezone)
-        else:
-            start_time, end_time, event_timezone = self._parse_date_to_utc(start_time, end_time, event_timezone)
+        try:
+            if all_day_event:
+                start_time, end_time, event_timezone = self._parse_all_day_event(start_time, event_timezone)
+            else:
+                start_time, end_time, event_timezone = self._parse_date_to_utc(start_time, end_time, event_timezone)
 
-            if start_time > end_time:
-                return self._error_dict(1, "Event cannot end before it started.")
+                if start_time > end_time:
+                    return self._error_dict(1, "Event cannot end before it started.")
+        except ValueError:
+            return self._error_dict(4, "Request malformed. Bad date format.")
 
         try:
             return self._success_dict('event_id', self._db.update_event(event_id, event_name, event_description,
@@ -276,9 +296,10 @@ class Calendar:
         try:
             return self._success_dict('invites', list(map(lambda e: self._event_as_user_event_timezone(e,
                                                                                                        user_timezone),
-                                                          self._db.get_invites(user_id, archive),)))
-        except Exception:
-            return self._error_dict(2, "Database error. Contact administrator.")
+                                                          self._db.get_invites(user_id, archive), )))
+        except Exception as e:
+            raise e
+            # return self._error_dict(2, "Database error. Contact administrator.")
 
     def edit_invite(self, user_id, invite_id, own_name, own_description, own_start, own_end, own_timezone,
                     own_all_day_event):
@@ -298,13 +319,16 @@ class Calendar:
         if own_description is not None and len(own_description) > 200:
             return self._error_dict(1, "Event description too long, it should contain up to 200 characters.")
 
-        if own_all_day_event:
-            own_start, own_end, own_timezone = self._parse_all_day_event(own_start, own_timezone)
-        else:
-            own_start, own_end, own_timezone = self._parse_date_to_utc(own_start, own_end, own_timezone)
+        try:
+            if own_all_day_event:
+                own_start, own_end, own_timezone = self._parse_all_day_event(own_start, own_timezone)
+            else:
+                own_start, own_end, own_timezone = self._parse_date_to_utc(own_start, own_end, own_timezone)
 
-            if own_start > own_end:
-                return self._error_dict(1, "Event cannot end before it started.")
+                if own_start > own_end:
+                    return self._error_dict(1, "Event cannot end before it started.")
+        except ValueError:
+            return self._error_dict(4, "Request malformed. Bad date format.")
 
         try:
             if self._db.update_invite_description(user_id, invite_id, own_name, own_description, own_start, own_end,
@@ -378,6 +402,17 @@ class Calendar:
                 return self._success
             else:
                 return self._error_dict(9, "Unknown error")  # possible?
+        except Exception:
+            return self._error_dict(2, "Database error. Contact administrator.")
+
+    def get_guests(self, user_id, event_id):
+        if not (self._is_invited(user_id, event_id) or self._can_read_calendar(user_id,
+                                                                               self._db.get_calendar_id_for_event(
+                                                                                       event_id))):
+            return self._error_dict(3, "You don't have permission to access guest list.")
+
+        try:
+            return self._success_dict("guests", self._db.get_event_guests(event_id))
         except Exception:
             return self._error_dict(2, "Database error. Contact administrator.")
 

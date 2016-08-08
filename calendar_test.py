@@ -1,4 +1,5 @@
 from calendar_app.calendar import Calendar
+from datetime import datetime, timezone, timedelta
 
 
 if __name__ == '__main__':
@@ -34,8 +35,21 @@ if __name__ == '__main__':
     print(calendar.get_calendars(u1_id))
 
     print(calendar.get_events(u2_id, u2_tz, c['calendar_id']))
-    print(calendar.share_calendar(u1_id, c['calendar_id'], u2_id, False))
+    s = calendar.share_calendar(u1_id, c['calendar_id'], u2_id, False)
+    print(s)
     print(calendar.get_events(u2_id, u2_tz, c['calendar_id']))
     print(calendar.get_calendars(u2_id))
 
+    e = calendar.add_event(u1_id, c['calendar_id'], 'event_test_name', 'event_test_description',
+                           datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
+                           (datetime.utcnow() + timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S"), 4, False)
+    print(e)
+    print(calendar.invite_user(u2_id, e['event_id'], u3_id))
+    calendar.edit_share_permission(u1_id, s['share_id'], True)
+    print(calendar.invite_user(u2_id, e['event_id'], u3_id))
+    print(calendar.invite_user(u2_id, e['event_id'], u4_id))
 
+    print(calendar.get_invites(u1_id, u1_tz))
+    print(calendar.get_invites(u2_id, u2_tz))
+    print(calendar.get_invites(u3_id, u3_tz))
+    print(calendar.get_invites(u4_id, u4_tz))

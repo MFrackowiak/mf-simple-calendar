@@ -53,7 +53,10 @@ if __name__ == '__main__':
                 for ev in events:
                     a = random.randint(0, len(users) - 1)
                     if users[a] != u:
-                        db_manager.add_invite(ev['event_id'], users[a]['user_id'])
+                        i = db_manager.add_invite(ev['event_id'], users[a]['user_id'])
+                        db_manager.update_invite_attendance(users[a]['user_id'], i, random.randint(0, 3))
+
+                    ev_id = ev['event_id']
 
             if test_shares:
                 a = random.randint(0, len(users) - 1)
@@ -135,3 +138,5 @@ if __name__ == '__main__':
     for e in events:
         a = str(e['start_time'])
         print(a)
+
+    print(db_manager.get_event_guests(5))
