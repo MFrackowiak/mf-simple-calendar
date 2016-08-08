@@ -159,8 +159,7 @@ class DatabaseManager:
     def get_users_like(self, like_string):
         _select = self._users.select(self._users.c.username.like(like_string))
 
-        return self._fetch_many_select(_select, lambda r: {"user_id": r[0], "username": r[1], "password": r[2],
-                                                           "tz": r[3]})
+        return self._fetch_many_select(_select, lambda r: {"user_id": r[0], "username": r[1]})
 
     def get_user_calendars(self, user_id):
         _select = self._calendars.select(self._calendars.c.owner_id == user_id)
