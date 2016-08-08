@@ -9,7 +9,7 @@ from .var_utils import get_password_hash, set_utc
 
 class Calendar:
     def __init__(self):
-        self._db = DatabaseManager(False)
+        self._db = DatabaseManager(True)
         self._success = {'success': True}
 
     def _can_read_calendar(self, user_id, calendar_id):
@@ -176,9 +176,12 @@ class Calendar:
                 return self._error_dict(1, "Event cannot end before it started.")
 
         try:
-            return self._success_dict('event_id', self._db.add_event(calendar_id, event_name, event_description,
-                                                                     start_time, end_time, event_timezone,
-                                                                     all_day_event))
+            event_id = self._db.add_event(calendar_id, event_name, event_description, start_time, end_time,
+                                          event_timezone, all_day_event)
+
+            self._db.add_invite(event_id, user_id, True)
+
+            return self._success_dict('event_id', event_id)
         except Exception:
             return self._error_dict(2, "Database error. Contact administrator.")
 
@@ -279,6 +282,13 @@ class Calendar:
 
     def edit_invite(self, user_id, invite_id, own_name, own_description, own_start, own_end, own_timezone,
                     own_all_day_event):
+        if self._db.get_invite_ownership(user_id, invite_id):
+            if None in [own_name, own_description, own_start, own_end, own_timezone, own_all_day_event]:
+                return self._error_dict(1, "Event owner can only perform basic event edits.")
+
+            return self.edit_event(user_id, self._db.get_event_id_for_invite(invite_id), own_name, own_description,
+                                   own_start, own_end, own_timezone, own_all_day_event)
+
         own_name = own_name.strip() if own_name is not None else None
         own_description = own_description.strip() if own_description is not None else None
 

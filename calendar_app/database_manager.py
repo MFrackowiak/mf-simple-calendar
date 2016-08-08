@@ -187,7 +187,7 @@ class DatabaseManager:
         return {"my_calendars": own_calendars, "shared_with_me": shared_calendars}
 
     def get_user_calendar_privilege(self, user_id, calendar_id):
-        _select = select([self._calendars.c.user_id]).where(self._calendars.c.calendar_id == calendar_id)
+        _select = select([self._calendars.c.owner_id]).where(self._calendars.c.calendar_id == calendar_id)
 
         connection = self._engine.connect()
 
@@ -334,5 +334,16 @@ class DatabaseManager:
 
     def get_calendar_id_for_share(self, share_id):
         _select = select([self._shares.c.calendar_id]).where(self._shares.c.share_id == share_id)
+
+        return self._fetch_single_select(_select, lambda r: r[0])
+
+    def get_invite_ownership(self, user_id, invite_id):
+        _select = select([self._invites.c.is_owner]).where(and_(self._invites.c.invite_id == invite_id,
+                                                                self._invites.c.user_id == user_id))
+
+        return self._fetch_single_select(_select, lambda r: r[0])
+
+    def get_event_id_for_invite(self, invite_id):
+        _select = select([self._invites.c.event_id]).where(self._invites.c.invite_id == invite_id)
 
         return self._fetch_single_select(_select, lambda r: r[0])
