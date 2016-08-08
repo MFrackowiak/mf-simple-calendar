@@ -46,10 +46,33 @@ if __name__ == '__main__':
     print(e)
     print(calendar.invite_user(u2_id, e['event_id'], u3_id))
     calendar.edit_share_permission(u1_id, s['share_id'], True)
-    print(calendar.invite_user(u2_id, e['event_id'], u3_id))
-    print(calendar.invite_user(u2_id, e['event_id'], u4_id))
+    i2_id = calendar.invite_user(u2_id, e['event_id'], u3_id)['invite_id']
+    print(i2_id)
 
-    print(calendar.get_invites(u1_id, u1_tz))
+    i1_id = calendar.get_invites(u1_id, u1_tz)['invites'][0]['invite_id']
     print(calendar.get_invites(u2_id, u2_tz))
     print(calendar.get_invites(u3_id, u3_tz))
     print(calendar.get_invites(u4_id, u4_tz))
+
+    print(calendar.get_guests(u4_id, e['event_id']))
+    print(calendar.get_guests(u2_id, e['event_id']))
+
+    print(calendar.edit_invite_attendance(u3_id, i2_id, 4))
+    print(calendar.edit_invite_attendance(u3_id, i2_id, 3))
+
+    print(calendar.get_guests(u2_id, e['event_id']))
+
+    print(calendar.get_invites(u3_id, u3_tz))
+
+    calendar.edit_invite(u3_id, i2_id, 'my_own_name', None, None, None, None, True)
+    print(calendar.get_invites(u3_id, u3_tz))
+
+    calendar.edit_invite(u1_id, i1_id, None, 'new_desc',
+                         (datetime.utcnow() + timedelta(days=10)).strftime("%Y-%m-%d %H:%M:%S"),
+                         (datetime.utcnow() + timedelta(days=10, hours=8)).strftime("%Y-%m-%d %H:%M:%S"), 4, False)
+    # print(calendar.get_invites(u3_id, u3_tz))
+
+    calendar.edit_invite(u1_id, i1_id, 'new_name', 'new_desc',
+                         (datetime.utcnow() + timedelta(days=10)).strftime("%Y-%m-%d %H:%M:%S"),
+                         (datetime.utcnow() + timedelta(days=10, hours=8)).strftime("%Y-%m-%d %H:%M:%S"), 4, False)
+    print(calendar.get_invites(u3_id, u3_tz))

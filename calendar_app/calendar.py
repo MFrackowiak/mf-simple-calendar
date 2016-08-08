@@ -74,13 +74,22 @@ class Calendar:
         if start_time.tzinfo is None:
             set_utc(start_time)
 
-        if abs(original_timezone - user_timezone) > 12:
-            if original_timezone > user_timezone:
-                start_time -= timedelta(days=1)
-            else:
-                start_time += timedelta(days=1)
+        if not (start_time.hour == 0 and start_time.minute == 0 and start_time.second == 0):
+            time_difference = start_time - start_time.replace(hour=0, minute=0, second=0)
+            time_difference = time_difference.seconds / 3600.0
 
-        return start_time, start_time + timedelta(days=1)
+            start_time = start_time.replace(hour=0, minute=0, second=0)
+
+        time_difference += user_timezone - original_timezone
+
+        if time_difference > 12 or time_difference < -12:
+            if time_difference > 0:
+                start_time += timedelta(days=1)
+            else:
+                start_time -= timedelta(days=1)
+
+        return start_time.replace(tzinfo=timezone(timedelta(hours=user_timezone))),\
+               (start_time + timedelta(days=1)).replace(tzinfo=timezone(timedelta(hours=user_timezone)))
 
     def _convert_date_to_tz(self, start_time, end_time, timezone_delta):
         if start_time.tzinfo is None:
@@ -134,7 +143,7 @@ class Calendar:
         if not 8 <= len(password) <= 30:
             return self._error_dict(1, "Password should have between 8 and 30 characters.")
 
-        if not -11 <= own_timezone <= 12:
+        if not -11 <= own_timezone <= 14:
             return self._error_dict(1, "Timezone should be between -11 and +12, 0 is UTC.")
 
         try:
@@ -303,12 +312,15 @@ class Calendar:
 
     def edit_invite(self, user_id, invite_id, own_name, own_description, own_start, own_end, own_timezone,
                     own_all_day_event):
-        if self._db.get_invite_ownership(user_id, invite_id):
-            if None in [own_name, own_description, own_start, own_end, own_timezone, own_all_day_event]:
-                return self._error_dict(1, "Event owner can only perform basic event edits.")
+        try:
+            if self._db.get_invite_ownership(user_id, invite_id):
+                if None in [own_name, own_description, own_start, own_end, own_timezone, own_all_day_event]:
+                    return self._error_dict(1, "Event owner can only perform basic event edits.")
 
-            return self.edit_event(user_id, self._db.get_event_id_for_invite(invite_id), own_name, own_description,
-                                   own_start, own_end, own_timezone, own_all_day_event)
+                return self.edit_event(user_id, self._db.get_event_id_for_invite(invite_id), own_name, own_description,
+                                       own_start, own_end, own_timezone, own_all_day_event)
+        except ValueError:
+            return self._error_dict(4, "Invite does not exist or request malformed.")
 
         own_name = own_name.strip() if own_name is not None else None
         own_description = own_description.strip() if own_description is not None else None
@@ -329,6 +341,8 @@ class Calendar:
                     return self._error_dict(1, "Event cannot end before it started.")
         except ValueError:
             return self._error_dict(4, "Request malformed. Bad date format.")
+        except TypeError:
+            pass
 
         try:
             if self._db.update_invite_description(user_id, invite_id, own_name, own_description, own_start, own_end,
