@@ -123,7 +123,6 @@ class Calendar:
         try:
             user_data = self._db.get_user_data(username)
         except ValueError:
-            # TODO Exception!!
             return self._error_dict(1, "Wrong username or password.")
         except Exception:
             return self._error_dict(2, "Database error. Contact administrator.")
@@ -143,7 +142,7 @@ class Calendar:
         if not 8 <= len(password) <= 30:
             return self._error_dict(1, "Password should have between 8 and 30 characters.")
 
-        if not -11 <= own_timezone <= 14:
+        if not -12 <= own_timezone <= 14:
             return self._error_dict(1, "Timezone should be between -11 and +12, 0 is UTC.")
 
         try:
@@ -171,10 +170,13 @@ class Calendar:
 
     def add_event(self, user_id, calendar_id, event_name, event_description, start_time, end_time, event_timezone,
                   all_day_event):
-        if not self._can_edit_calendar(user_id, calendar_id):
-            return self._error_dict(3, "You have no edit permissions for given calendar.")
+        try:
+            if not self._can_edit_calendar(user_id, calendar_id):
+                return self._error_dict(3, "You have no edit permissions for given calendar.")
+        except ValueError:
+            return self._error_dict(1, "Calendar does not exist.")
 
-        if None in [calendar_id, event_name, event_description, start_time, end_time, event_timezone, all_day_event]:
+        if None in [calendar_id, event_name, event_description, start_time, end_time, all_day_event]:
             return self._error_dict(4, "Request malformed, all values must be provided")
 
         event_name = event_name.strip()
@@ -208,8 +210,11 @@ class Calendar:
             return self._error_dict(2, "Database error. Contact administrator.")
 
     def share_calendar(self, user_id, calendar_id, share_with_id, write_permission):
-        if not self._calendar_owner(user_id, calendar_id):
-            return self._error_dict(3, "Only calendar owner can further share it.")
+        try:
+            if not self._calendar_owner(user_id, calendar_id):
+                return self._error_dict(3, "Only calendar owner can further share it.")
+        except ValueError:
+            return self._error_dict(1, "Calendar does not exist.")
 
         try:
             return self._success_dict('share_id', self._db.add_share(calendar_id, share_with_id, write_permission))
@@ -219,34 +224,44 @@ class Calendar:
             return self._error_dict(2, "Database error. Contact administrator.")
 
     def invite_user(self, user_id, event_id, invited_id, is_owner=False):
-        # TODO Exception na nieistniejące ID!! (nie tylko tutaj)
-        if not self._can_edit_calendar(user_id, self._db.get_calendar_id_for_event(event_id)):
-            return self._error_dict(3, "Calendar edit permission is required to invite to its events.")
+        try:
+            if not self._can_edit_calendar(user_id, self._db.get_calendar_id_for_event(event_id)):
+                return self._error_dict(3, "Calendar edit permission is required to invite to its events.")
+        except ValueError:
+            return self._error_dict(1, "Event does not exist.")
 
         try:
             return self._success_dict('invite_id', self._db.add_invite(event_id, invited_id, is_owner))
         except IntegrityError:
-            return self._error_dict(1, "User already invited to this event.")
-        except Exception as e:
+            return self._error_dict(1, "User not existing or already invited to this event.")
+        except Exception:
             return self._error_dict(2, "Database error. Contact administrator.")
 
     def edit_calendar(self, user_id, calendar_id, calendar_name, calendar_color):
-        if not self._can_edit_calendar(user_id, calendar_id):
-            return self._error_dict(3, "Calendar edit permission required to perform this action.")
+        try:
+            if not self._can_edit_calendar(user_id, calendar_id):
+                return self._error_dict(3, "Calendar edit permission required to perform this action.")
+        except ValueError:
+            return self._error_dict(1, "Calendar does not exist.")
 
         try:
             if self._db.update_calendar(calendar_id, calendar_name, calendar_color):
                 return self._success
             else:
-                pass
-                # TODO w jakich warunkach?
+                return self._error_dict(9, "Unknown error.")
         except Exception:
             return self._error_dict(2, "Database error. Contact administrator.")
 
     def edit_event(self, user_id, event_id, event_name, event_description, start_time, end_time, event_timezone,
                    all_day_event):
-        if not self._can_edit_calendar(user_id, self._db.get_calendar_id_for_event(event_id)):
-            return self._error_dict(3, "Calendar edit permission is required to edit its events.")
+        try:
+            if not self._can_edit_calendar(user_id, self._db.get_calendar_id_for_event(event_id)):
+                return self._error_dict(3, "Calendar edit permission is required to edit its events.")
+        except ValueError:
+            return self._error_dict(1, "Event does not exist.")
+
+        if None in [event_name, event_description, start_time, end_time, all_day_event]:
+            return self._error_dict(4, "Request malformed, all values must be provided")
 
         event_name = event_name.strip()
         event_description = event_description.strip()
@@ -282,8 +297,11 @@ class Calendar:
             return self._error_dict(2, "Database error. Contact administrator.")
 
     def get_events(self, user_id, user_timezone, calendar_id):
-        if not self._can_read_calendar(user_id, calendar_id):
-            return self._error_dict(3, "Calendar read permission required to perform this action.")
+        try:
+            if not self._can_read_calendar(user_id, calendar_id):
+                return self._error_dict(3, "Calendar read permission required to perform this action.")
+        except ValueError:
+            return self._error_dict(1, "Calendar does not exist.")
 
         try:
             return self._success_dict('events', list(map(lambda e: self._event_as_user_event_timezone(e, user_timezone),
@@ -292,8 +310,11 @@ class Calendar:
             return self._error_dict(2, "Database error. Contact administrator.")
 
     def get_event(self, user_id, user_timezone, event_id):
-        if not self._can_read_calendar(user_id, self._db.get_calendar_id_for_event(event_id)):
-            return self._error_dict(3, "Calendar read permission required to perform this action.")
+        try:
+            if not self._can_read_calendar(user_id, self._db.get_calendar_id_for_event(event_id)):
+                return self._error_dict(3, "Calendar read permission required to perform this action.")
+        except ValueError:
+            return self._error_dict(1, "Calendar does not exist.")
 
         try:
             return self._success_dict('event', self._event_as_user_event_timezone(self._db.get_event(event_id),
@@ -305,10 +326,9 @@ class Calendar:
         try:
             return self._success_dict('invites', list(map(lambda e: self._event_as_user_event_timezone(e,
                                                                                                        user_timezone),
-                                                          self._db.get_invites(user_id, archive), )))
+                                                          self._db.get_invites(user_id, archive))))
         except Exception as e:
-            raise e
-            # return self._error_dict(2, "Database error. Contact administrator.")
+            return self._error_dict(2, "Database error. Contact administrator.")
 
     def edit_invite(self, user_id, invite_id, own_name, own_description, own_start, own_end, own_timezone,
                     own_all_day_event):
@@ -372,8 +392,11 @@ class Calendar:
             return self._error_dict(2, "Database error. Contact administrator.")
 
     def edit_share_permission(self, user_id, share_id, write_permission):
-        if not self._calendar_owner(user_id, self._db.get_calendar_id_for_share(share_id)):
-            return self._error_dict(3, "Calendar ownership required to perform this action.")
+        try:
+            if not self._calendar_owner(user_id, self._db.get_calendar_id_for_share(share_id)):
+                return self._error_dict(3, "Calendar ownership required to perform this action.")
+        except ValueError:
+            return self._error_dict(1, "Share does not exist.")
 
         try:
             if self._db.update_share(share_id, write_permission):
@@ -384,46 +407,58 @@ class Calendar:
             return self._error_dict(2, "Database error. Contact administrator.")
 
     def delete_share(self, user_id, share_id):
-        if not self._calendar_owner(user_id, self._db.get_calendar_id_for_share(share_id)):
-            return self._error_dict(3, "Calendar ownership required to perform this action.")
+        try:
+            if not self._calendar_owner(user_id, self._db.get_calendar_id_for_share(share_id)):
+                return self._error_dict(3, "Calendar ownership required to perform this action.")
+        except ValueError:
+            return self._error_dict(1, "Share does not exist.")
 
         try:
             if self._db.delete_share(share_id):
                 return self._success
             else:
-                return self._error_dict(9, "Unknown error")  # possible?
+                return self._error_dict(9, "Unknown error.")
         except Exception:
             return self._error_dict(2, "Database error. Contact administrator.")
 
     def delete_event(self, user_id, event_id):
-        if not self._can_edit_calendar(user_id, self._db.get_calendar_id_for_event(event_id)):
-            return self._error_dict(3, "Calendar ownership required to perform this action.")
+        try:
+            if not self._can_edit_calendar(user_id, self._db.get_calendar_id_for_event(event_id)):
+                return self._error_dict(3, "Calendar ownership required to perform this action.")
+        except ValueError:
+            return self._error_dict(1, "Event does not exist.")
 
         try:
             if self._db.delete_event(event_id):
                 return self._success
             else:
-                return self._error_dict(9, "Unknown error")  # possible?
+                return self._error_dict(9, "Unknown error")
         except Exception:
             return self._error_dict(2, "Database error. Contact administrator.")
 
     def delete_calendar(self, user_id, calendar_id):
-        if not self._calendar_owner(user_id, calendar_id):
-            return self._error_dict(3, "Calendar ownership required to perform this action.")
+        try:
+            if not self._calendar_owner(user_id, calendar_id):
+                return self._error_dict(3, "Calendar ownership required to perform this action.")
+        except ValueError:
+            return self._error_dict(1, "Calendar does not exist.")
 
         try:
             if self._db.delete_calendar(calendar_id):
                 return self._success
             else:
-                return self._error_dict(9, "Unknown error")  # possible?
+                return self._error_dict(9, "Unknown error")
         except Exception:
             return self._error_dict(2, "Database error. Contact administrator.")
 
     def get_guests(self, user_id, event_id):
-        if not (self._is_invited(user_id, event_id) or self._can_read_calendar(user_id,
-                                                                               self._db.get_calendar_id_for_event(
-                                                                                       event_id))):
-            return self._error_dict(3, "You don't have permission to access guest list.")
+        try:
+            if not (self._is_invited(user_id, event_id) or self._can_read_calendar(user_id,
+                                                                                   self._db.get_calendar_id_for_event(
+                                                                                           event_id))):
+                return self._error_dict(3, "You don't have permission to access guest list.")
+        except ValueError:
+            return self._error_dict(1, "Event does not exist.")
 
         try:
             return self._success_dict("guests", self._db.get_event_guests(event_id))

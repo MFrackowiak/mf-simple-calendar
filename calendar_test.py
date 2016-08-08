@@ -76,3 +76,10 @@ if __name__ == '__main__':
                          (datetime.utcnow() + timedelta(days=10)).strftime("%Y-%m-%d %H:%M:%S"),
                          (datetime.utcnow() + timedelta(days=10, hours=8)).strftime("%Y-%m-%d %H:%M:%S"), 4, False)
     print(calendar.get_invites(u3_id, u3_tz))
+
+    # calendar.delete_event(u1_id, e['event_id'])
+    # calendar.delete_calendar(u1_id, c['calendar_id'])
+
+    print(calendar.get_invites(u3_id, u3_tz))
+
+    print(calendar.invite_user(u1_id, c['calendar_id'], 999))
