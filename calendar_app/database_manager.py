@@ -157,7 +157,7 @@ class DatabaseManager:
                                                              "tz": r[3]})
 
     def get_users_like(self, like_string):
-        _select = self._users.select(self._users.c.username.like(like_string))
+        _select = self._users.select(self._users.c.username.like('%' + like_string + '%'))
 
         return self._fetch_many_select(_select, lambda r: {"user_id": r[0], "username": r[1]})
 
