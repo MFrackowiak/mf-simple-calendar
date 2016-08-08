@@ -269,9 +269,11 @@ class Calendar:
         except Exception:
             return self._error_dict(2, "Database error. Contact administrator.")
 
-    def get_invites(self, user_id, archive=False):
+    def get_invites(self, user_id, user_timezone, archive=False):
         try:
-            return self._success_dict('invites', self._db.get_invites(user_id, archive))
+            return self._success_dict('invites', list(map(lambda e: self._event_as_user_event_timezone(e,
+                                                                                                       user_timezone),
+                                                          self._db.get_invites(user_id, archive),)))
         except Exception:
             return self._error_dict(2, "Database error. Contact administrator.")
 
@@ -312,6 +314,60 @@ class Calendar:
                 return self._success
             else:
                 return self._error_dict(4, "Invite does not exist or request malformed.")
+        except Exception:
+            return self._error_dict(2, "Database error. Contact administrator.")
+
+    def get_shares(self, user_id):
+        try:
+            return self._success_dict("shares", self._db.get_user_shares(user_id))
+        except Exception:
+            return self._error_dict(2, "Database error. Contact administrator.")
+
+    def edit_share_permission(self, user_id, share_id, write_permission):
+        if not self._calendar_owner(user_id, self._db.get_calendar_id_for_share(share_id)):
+            return self._error_dict(3, "Calendar ownership required to perform this action.")
+
+        try:
+            if self._db.update_share(share_id, write_permission):
+                return self._success
+            else:
+                return self._error_dict(9, "Unknown error")  # possible?
+        except Exception:
+            return self._error_dict(2, "Database error. Contact administrator.")
+
+    def delete_share(self, user_id, share_id):
+        if not self._calendar_owner(user_id, self._db.get_calendar_id_for_share(share_id)):
+            return self._error_dict(3, "Calendar ownership required to perform this action.")
+
+        try:
+            if self._db.delete_share(share_id):
+                return self._success
+            else:
+                return self._error_dict(9, "Unknown error")  # possible?
+        except Exception:
+            return self._error_dict(2, "Database error. Contact administrator.")
+
+    def delete_event(self, user_id, event_id):
+        if not self._can_edit_calendar(user_id, self._db.get_calendar_id_for_event(event_id)):
+            return self._error_dict(3, "Calendar ownership required to perform this action.")
+
+        try:
+            if self._db.delete_event(event_id):
+                return self._success
+            else:
+                return self._error_dict(9, "Unknown error")  # possible?
+        except Exception:
+            return self._error_dict(2, "Database error. Contact administrator.")
+
+    def delete_calendar(self, user_id, calendar_id):
+        if not self._calendar_owner(user_id, calendar_id):
+            return self._error_dict(3, "Calendar ownership required to perform this action.")
+
+        try:
+            if self._db.delete_calendar(calendar_id):
+                return self._success
+            else:
+                return self._error_dict(9, "Unknown error")  # possible?
         except Exception:
             return self._error_dict(2, "Database error. Contact administrator.")
 

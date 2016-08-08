@@ -240,8 +240,8 @@ class DatabaseManager:
                                                   "event_name": r[9] if r[8] and r[9] is not None else r[1],
                                                   "start_time": set_utc(r[10] if r[8] and r[10] is not None else r[2]),
                                                   "end_time": set_utc(r[11] if r[8] and r[11] is not None else r[3]),
-                                                  "timezone": r[16] if r[8] and r[16] is not None else r[4],
-                                                  "all_day": r[12] if r[8] and r[12] is not None else r[5],
+                                                  "event_timezone": r[16] if r[8] and r[16] is not None else r[4],
+                                                  "all_day_event": r[12] if r[8] and r[12] is not None else r[5],
                                                   "invite_id": r[6],
                                                   "is_owner": r[7],
                                                   "attendance": r[13],
@@ -329,5 +329,10 @@ class DatabaseManager:
 
     def get_calendar_id_for_event(self, event_id):
         _select = select([self._events.c.calendar_id]).where(self._events.c.event_id == event_id)
+
+        return self._fetch_single_select(_select, lambda r: r[0])
+
+    def get_calendar_id_for_share(self, share_id):
+        _select = select([self._shares.c.calendar_id]).where(self._shares.c.share_id == share_id)
 
         return self._fetch_single_select(_select, lambda r: r[0])
