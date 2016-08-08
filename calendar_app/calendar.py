@@ -275,7 +275,45 @@ class Calendar:
         except Exception:
             return self._error_dict(2, "Database error. Contact administrator.")
 
-    def edit_invite(self):
-        pass
+    def edit_invite(self, user_id, invite_id, own_name, own_description, own_start, own_end, own_timezone,
+                    own_all_day_event):
+        own_name = own_name.strip() if own_name is not None else None
+        own_description = own_description.strip() if own_description is not None else None
+
+        if own_name is not None and not 4 <= len(own_name) <= 30:
+            return self._error_dict(1, "Event name should have between 4 and 30 characters.")
+
+        if own_description is not None and len(own_description) > 200:
+            return self._error_dict(1, "Event description too long, it should contain up to 200 characters.")
+
+        if own_all_day_event:
+            own_start, own_end, own_timezone = self._parse_all_day_event(own_start, own_timezone)
+        else:
+            own_start, own_end, own_timezone = self._parse_date_to_utc(own_start, own_end, own_timezone)
+
+            if own_start > own_end:
+                return self._error_dict(1, "Event cannot end before it started.")
+
+        try:
+            if self._db.update_invite_description(user_id, invite_id, own_name, own_description, own_start, own_end,
+                                                  own_all_day_event):
+                return self._success
+            else:
+                return self._error_dict(4, "Invite does not exist or request malformed.")
+        except Exception:
+            return self._error_dict(2, "Database error. Contact administrator.")
+
+    def edit_invite_attendance(self, user_id, invite_id, attendance):
+        if 1 > attendance > 3:
+            return self._error_dict(1, "Attendance status unknown or not allowed.")
+
+        try:
+            if self._db.update_invite_attendance(user_id, invite_id, attendance):
+                return self._success
+            else:
+                return self._error_dict(4, "Invite does not exist or request malformed.")
+        except Exception:
+            return self._error_dict(2, "Database error. Contact administrator.")
+
 
 calendar_app = Calendar()
