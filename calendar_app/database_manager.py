@@ -1,5 +1,3 @@
-import hashlib
-
 from sqlalchemy import create_engine, Table, Column, Integer, DateTime, String, MetaData, ForeignKey, Boolean, \
     UniqueConstraint, select, alias
 from sqlalchemy.sql import and_, or_
@@ -7,7 +5,7 @@ from sqlalchemy_utils import create_database, database_exists
 from datetime import datetime
 
 from .config import server_type, server_url, db_user, db_password, database_name, debug
-from .var_utils import get_password_hash
+from .var_utils import get_password_hash, set_utc
 
 
 class DatabaseManager:
@@ -26,7 +24,8 @@ class DatabaseManager:
                             Column('user_id', Integer, primary_key=True),
                             Column('username', String(30), unique=True, nullable=False),
                             Column('password', String(64), nullable=False),
-                            Column('own_timezone', Integer, nullable=False))
+                            Column('own_timezone', Integer, nullable=False),
+                            UniqueConstraint('username', name='unique_username'))
 
         self._calendars = Table('calendars', metadata,
                                 Column('calendar_id', Integer, primary_key=True),
@@ -66,6 +65,7 @@ class DatabaseManager:
                               Column('own_description', String(200), nullable=True),
                               Column('own_start_time', DateTime, nullable=True),
                               Column('own_end_time', DateTime, nullable=True),
+                              Column('own_timezone', Integer, nullable=True),
                               Column('own_all_day_event', Boolean, nullable=True),
                               Column('attendance_status', Integer, default=0, nullable=False),
                               UniqueConstraint('event_id', 'user_id', name='unique_invites'))
@@ -105,7 +105,7 @@ class DatabaseManager:
         connection.close()
 
         if result.rowcount < 1:
-            raise ValueError("Zadany rekord nie istnieje w bazie danych.")
+            raise ValueError("Given record does not exist in database.")
 
         return mapping(result.fetchone()) if mapping is not None else result.fetchone()
 
@@ -145,8 +145,8 @@ class DatabaseManager:
 
         return self._execute_single_insert(_insert)
 
-    def add_invite(self, event_id, user_id):
-        _insert = self._invites.insert().values(event_id=event_id, user_id=user_id)
+    def add_invite(self, event_id, user_id, is_owner=False):
+        _insert = self._invites.insert().values(event_id=event_id, user_id=user_id, is_owner=is_owner)
 
         return self._execute_single_insert(_insert)
 
@@ -187,7 +187,7 @@ class DatabaseManager:
         return {"my_calendars": own_calendars, "shared_with_me": shared_calendars}
 
     def get_user_calendar_privilege(self, user_id, calendar_id):
-        _select = select([self._calendars.c.user_id]).where(self._calendars.c.calendar_id == calendar_id)
+        _select = select([self._calendars.c.owner_id]).where(self._calendars.c.calendar_id == calendar_id)
 
         connection = self._engine.connect()
 
@@ -212,9 +212,10 @@ class DatabaseManager:
                           self._events.c.event_description]). \
             where(self._events.c.calendar_id == calendar_id)
 
-        return self._fetch_many_select(_select, lambda r: {"event_id": r[0], "event_name": r[1], "start_time": r[2],
-                                                           "end_time": r[3], "event_timezone": r[4],
-                                                           "all_day_event": r[5], "event_description": r[6]})
+        return self._fetch_many_select(_select, lambda r: {"event_id": r[0], "event_name": r[1],
+                                                           "start_time": set_utc(r[2]), "end_time": set_utc(r[3]),
+                                                           "event_timezone": r[4], "all_day_event": r[5],
+                                                           "event_description": r[6]})
 
     def get_invites(self, user_id, archive=False):
         # TODO timezones!
@@ -228,7 +229,8 @@ class DatabaseManager:
                           self._invites.c.invite_id, self._invites.c.is_owner, self._invites.c.has_edited,
                           self._invites.c.own_name, self._invites.c.own_start_time, self._invites.c.own_end_time,
                           self._invites.c.own_all_day_event, self._invites.c.attendance_status,
-                          self._events.c.event_description, self._invites.c.own_description]). \
+                          self._events.c.event_description, self._invites.c.own_description,
+                          self._invites.c.own_timezone]). \
             select_from(self._events.join(self._invites)).where(
             and_(self._invites.c.user_id == user_id, _or_clause))
 
@@ -236,10 +238,10 @@ class DatabaseManager:
         return self._fetch_many_select(_select,
                                        lambda r: {"event_id": r[0],
                                                   "event_name": r[9] if r[8] and r[9] is not None else r[1],
-                                                  "start_time": r[10] if r[8] and r[10] is not None else r[2],
-                                                  "end_time": r[11] if r[8] and r[11] is not None else r[3],
-                                                  "timezone": r[4],
-                                                  "all_day": r[12] if r[8] and r[12] is not None else r[5],
+                                                  "start_time": set_utc(r[10] if r[8] and r[10] is not None else r[2]),
+                                                  "end_time": set_utc(r[11] if r[8] and r[11] is not None else r[3]),
+                                                  "event_timezone": r[16] if r[8] and r[16] is not None else r[4],
+                                                  "all_day_event": r[12] if r[8] and r[12] is not None else r[5],
                                                   "invite_id": r[6],
                                                   "is_owner": r[7],
                                                   "attendance": r[13],
@@ -321,6 +323,46 @@ class DatabaseManager:
         _select = self._events.select(self._events.c.event_id == event_id)
 
         return self._fetch_single_select(_select, lambda r: {'event_id': r[0], 'event_name': r[2],
-                                                             'event_description': r[3], 'start_time': r[4],
-                                                             'end_time': r[5], 'event_timezone': r[6],
+                                                             'event_description': r[3], 'start_time': set_utc(r[4]),
+                                                             'end_time': set_utc(r[5]), 'event_timezone': r[6],
                                                              'all_day_event': r[7]})
+
+    def get_calendar_id_for_event(self, event_id):
+        _select = select([self._events.c.calendar_id]).where(self._events.c.event_id == event_id)
+
+        return self._fetch_single_select(_select, lambda r: r[0])
+
+    def get_calendar_id_for_share(self, share_id):
+        _select = select([self._shares.c.calendar_id]).where(self._shares.c.share_id == share_id)
+
+        return self._fetch_single_select(_select, lambda r: r[0])
+
+    def get_invite_ownership(self, user_id, invite_id):
+        _select = select([self._invites.c.is_owner]).where(and_(self._invites.c.invite_id == invite_id,
+                                                                self._invites.c.user_id == user_id))
+
+        return self._fetch_single_select(_select, lambda r: r[0])
+
+    def get_event_id_for_invite(self, invite_id):
+        _select = select([self._invites.c.event_id]).where(self._invites.c.invite_id == invite_id)
+
+        return self._fetch_single_select(_select, lambda r: r[0])
+
+    def get_event_guests(self, event_id):
+        guests = {}
+
+        for attendance_status, attendance_id in zip(['unknown', 'no', 'maybe', 'yes'], range(0, 4)):
+            _alias = alias(select([self._invites.c.user_id]).where(
+                and_(self._invites.c.event_id == event_id, self._invites.c.attendance_status == attendance_id)))
+            _select = select([self._users.c.username]).select_from(self._users.join(_alias, _alias.c.user_id ==
+                                                                                    self._users.c.user_id))
+
+            guests[attendance_status] = self._fetch_many_select(_select, lambda r: r[0])
+
+        return guests
+
+    def get_invite_for_user_at_event(self, user_id, event_id):
+        _select = self._invites.select(and_(self._invites.c.user_id == user_id, self._invites.c.event_id == event_id))
+
+        return self._fetch_single_select(_select, lambda r: {'invite_id': r[0], 'is_owner': r[1], 'has_edited': r[2],
+                                                             'attendance': r[3]})
