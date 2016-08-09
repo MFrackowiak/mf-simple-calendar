@@ -49,121 +49,155 @@ All dates are returned in format `%Y-%m-%d %H:%M:%S %z` (as in Python datetime).
 
 *Note: `None` in returned means that given method returns only `success` flag.*
 
-* `/user`
+#### `/user`
 
-   **Method**: PUT
-   **Data**: `{'username': <str>, 'password': <str>, 'timezone': <int>}`
-   **Returned**: `{'user_id': <int>}`
-   Creates new user with given data.
-* `/users/<str:like>`
-   **Method**: GET
-   **Data**: `None`
-   **Returned**: `{'users': [{'user_id': <int>, 'username': <str>}, ...]}`
-   Gets users with names similiar to given `like` string.
-* `/auth`
-   **Method**: POST
-   **Data**: `{'username': <str>, 'password': <str>}`
-   **Returned**: `{'auth': <bool>}`
-   Creates session for existing user.
-* `/logout`
-   **Method**: PUT
-   **Data**: `None`
-   **Returned**: `None`
-   End current user session.
-* `/calendar`
-   **Method**: PUT
-   **Data**: `{'calendar_name': <str>, 'calendar_color': <str>}`
-   **Returned**: `{'calendar_id': <int>}`
-   Creates new calendar.
-* `/calendar/<int:calendar_id>`
-   **Method**: GET
-   **Data**: `None`
-   **Returned**: `{'events': [{'all_day_event': <bool>, 'event_name': <str>, 'event_timezone': <int>, 'event_id': <int>, 'end_time': <str>, 'start_time': <str>, 'event_description': <str>, 'user_timezone': <int>, 'user_end_time': <str>, 'user_start_time': <str>}, ...]}`
-   Returns all events from given calendar.
-   **Method**: POST
-   **Data**: `{'calendar_name': <str>, 'calendar_color': <str>}`
-   **Returned**: `None`
-   Edits calendar.
-   **Method**: DELETE
-   **Data**: `None`
-   **Returned**: `None`
-   Deletes calendar.
-* `/calendar/<int:calendar_id>/share`
-   **Method**: PUT
-   **Data**: `{'user_id': <int>, 'write_permission': <bool>}`
-   **Returned**: `{'share_id': <int>}`
-   Shares calendar with given user at given permission level.
-* `/calendars`
-   **Method**: GET
-   **Data**: `None`
-   **Returned**: `{'calendars': {'my_calendars': [{'calendar_name': <str>, 'calendar_color': <str>, 'calendar_id': <int>}, ...], 'shared_with_me' : [{'owner': <str>, 'calendar_id': <int>, 'calendar_name': <str>, 'calendar_color': <str>, 'write_permission': <bool>}}, ...]}}`
-   Returns all calendars owned or shared with given user.
-* `/shares`
-   **Method**: GET
-   **Data**: `None`
-   **Returned**: `{'shares': [{'share_id': <int>, 'calendar_name': <str>, 'calendar_color': <str>, 'write_permission': <bool>, 'shared_with': <str>}, ...]}`
-   Returns all shares of owned calendars with different users.
-* `/share/<int:share_id>`
-   **Method**: POST
-   **Data**: `{'write_permission': <bool>}`
-   **Returned**: `None`
-   Edits write permission of given share.
-   **Method**: DELETE
-   **Data**: `None`
-   **Returned**: `None`
-   Deletes sharing calendar with other user.
-* `/calendar/<int:calendar_id>/event`
-   **Method**: PUT
-   **Data**: `{'all_day_event': <bool>, 'event_name': <str>, 'event_timezone': <int>, 'event_id': <int>, 'end_time': <str>, 'start_time': <str>, 'event_description': <str>}`
-   **Returned**: `{'user_id': <int>}`
-   Creates new event. `start_time` and `end_time` can be either in format `%Y-%m-%d %H:%M:%S %z` with `event_timezone` omitted or `null` or in format `%Y-%m-%d %H:%M:%S`.
-* `/event/<int:event_id>`
-   **Method**: GET
-   **Data**: `None`
-   **Returned**: `{'event': {'all_day_event': <bool>, 'event_name': <str>, 'event_timezone': <int>, 'event_id': <int>, 'end_time': <str>, 'start_time': <str>, 'event_description': <str>, 'user_timezone': <int>, 'user_end_time': <str>, 'user_start_time': <str>}}`
-   Return given event data.
-   **Method**: POST
-   **Data**: `{'all_day_event': <bool>, 'event_name': <str>, 'event_timezone': <int>, 'event_id': <int>, 'end_time': <str>, 'start_time': <str>, 'event_description': <str>}`
-   **Returned**: `None`
-   Edits given event.
-   **Method**: DELETE
-   **Data**: `{'username': <str>, 'password': <str>, 'timezone': <int>}`
-   **Returned**: `{'user_id': <int>}`
-   Deletes given event.
-* `/event/<int:event_id>/invite`
-   **Method**: PUT
-   **Data**: `{'user_id': <int>}`
-   **Returned**: `None`
-   Creates event for given user for event.
-* `/event/<int:event_id>/guests`
-   **Method**: GET
-   **Data**: `None`
-   **Returned**: `{'guests': {'no': [<str:username>, ...], 'maybe': [<str:username>, ...], 'unknown': [<str:username>, ...], 'yes': [<str:username>, ...]}}`
-   Returns guest list for given event.
-* `/invites(/<int:archive>)?`
-   **Method**: GET
-   **Data**: `None`
-   **Returned**: `{'invites': [{'user_timezone': <int>, 'user_end_time': <str>, 'event_timezone': <int>, 'end_time': <str>, 'is_owner': <bool>, 'start_time': <str>, 'all_day_event': <bool>, 'description': <str>, 'attendance': <int>, 'event_id': <int>, 'user_start_time': <str>, 'event_name': <str>, 'invite_id': <int>}, ...]}`
-   Returns invites for given user. At default returns only invites for events that are not yet finished, with `archive == 0` returns only past, finished events.
-* `/invite/<int:invite_id>`
-   **Method**: POST
-   **Data**: `{'all_day_event': <bool>, 'event_name': <str>, 'event_timezone': <int>, 'event_id': <int>, 'end_time': <str>, 'start_time': <str>, 'event_description': <str>}`
-   **Returned**: `None`
-   Edits event data of given invite. Unchanged values can be set to `null`.
-   **Method**: GET
-   **Data**: `None`
-   **Returned**: `{'user_timezone': <int>, 'user_end_time': <str>, 'event_timezone': <int>, 'end_time': <str>, 'is_owner': <bool>, 'start_time': <str>, 'all_day_event': <bool>, 'description': <str>, 'attendance': <int>, 'event_id': <int>, 'user_start_time': <str>, 'event_name': <str>, 'invite_id': <int>}`
-   Returns given invite.
-* `/invite/<int:invite_id>/attendance`
-   **Method**: POST
-   **Data**: `{'attendance': <int>}`
-   **Returned**: `None`
-   Changes attendance status for given invite. Attendance status cannot be changed to 'unknown'
-* `/invite/<int:invite_id>/restore`
-   **Method**: POST
-   **Data**: `None`
-   **Returned**: `None`
-   Deletes any private changes in invite description for event.
+* **Method**: PUT
+* **Data**: `{'username': <str>, 'password': <str>, 'timezone': <int>}`
+* **Returned**: `{'user_id': <int>}`
+* Creates new user with given data.
+
+#### `/users/<str:like>`
+
+* **Method**: GET
+* **Data**: `None`
+* **Returned**: `{'users': [{'user_id': <int>, 'username': <str>}, ...]}`
+* Gets users with names similiar to given `like` string.
+   
+#### `/auth`
+
+* **Method**: POST
+* **Data**: `{'username': <str>, 'password': <str>}`
+* **Returned**: `{'auth': <bool>}`
+* Creates session for existing user.
+
+#### `/logout`
+
+* **Method**: PUT
+* **Data**: `None`
+* **Returned**: `None`
+* End current user session.
+
+#### `/calendar`
+
+* **Method**: PUT
+* **Data**: `{'calendar_name': <str>, 'calendar_color': <str>}`
+* **Returned**: `{'calendar_id': <int>}`
+* Creates new calendar.
+
+#### `/calendar/<int:calendar_id>`
+
+* **Method**: GET
+* **Data**: `None`
+* **Returned**: `{'events': [{'all_day_event': <bool>, 'event_name': <str>, 'event_timezone': <int>, 'event_id': <int>, 'end_time': <str>, 'start_time': <str>, 'event_description': <str>, 'user_timezone': <int>, 'user_end_time': <str>, 'user_start_time': <str>}, ...]}`
+* Returns all events from given calendar.
+* **Method**: POST
+* **Data**: `{'calendar_name': <str>, 'calendar_color': <str>}`
+* **Returned**: `None`
+* Edits calendar.
+* **Method**: DELETE
+* **Data**: `None`
+* **Returned**: `None`
+* Deletes calendar.
+
+#### `/calendar/<int:calendar_id>/share`
+
+* **Method**: PUT
+* **Data**: `{'user_id': <int>, 'write_permission': <bool>}`
+* **Returned**: `{'share_id': <int>}`
+* Shares calendar with given user at given permission level.
+
+#### `/calendars`
+
+* **Method**: GET
+* **Data**: `None`
+* **Returned**: `{'calendars': {'my_calendars': [{'calendar_name': <str>, 'calendar_color': <str>, 'calendar_id': <int>}, ...], 'shared_with_me' : [{'owner': <str>, 'calendar_id': <int>, 'calendar_name': <str>, 'calendar_color': <str>, 'write_permission': <bool>}}, ...]}}`
+* Returns all calendars owned or shared with given user.
+
+#### `/shares`
+
+* **Method**: GET
+* **Data**: `None`
+* **Returned**: `{'shares': [{'share_id': <int>, 'calendar_name': <str>, 'calendar_color': <str>, 'write_permission': <bool>, 'shared_with': <str>}, ...]}`
+* Returns all shares of owned calendars with different users.
+
+#### `/share/<int:share_id>`
+
+* **Method**: POST
+* **Data**: `{'write_permission': <bool>}`
+* **Returned**: `None`
+* Edits write permission of given share.
+* **Method**: DELETE
+* **Data**: `None`
+* **Returned**: `None`
+* Deletes sharing calendar with other user.
+
+#### `/calendar/<int:calendar_id>/event`
+
+* **Method**: PUT
+* **Data**: `{'all_day_event': <bool>, 'event_name': <str>, 'event_timezone': <int>, 'event_id': <int>, 'end_time': <str>, 'start_time': <str>, 'event_description': <str>}`
+* **Returned**: `{'user_id': <int>}`
+* Creates new event. `start_time` and `end_time` can be either in format `%Y-%m-%d %H:%M:%S %z` with `event_timezone` omitted or `null` or in format `%Y-%m-%d %H:%M:%S`.
+
+#### `/event/<int:event_id>`
+
+* **Method**: GET
+* **Data**: `None`
+* **Returned**: `{'event': {'all_day_event': <bool>, 'event_name': <str>, 'event_timezone': <int>, 'event_id': <int>, 'end_time': <str>, 'start_time': <str>, 'event_description': <str>, 'user_timezone': <int>, 'user_end_time': <str>, 'user_start_time': <str>}}`
+* Return given event data.
+* **Method**: POST
+* **Data**: `{'all_day_event': <bool>, 'event_name': <str>, 'event_timezone': <int>, 'event_id': <int>, 'end_time': <str>, 'start_time': <str>, 'event_description': <str>}`
+* **Returned**: `None`
+* Edits given event.
+* **Method**: DELETE
+* **Data**: `{'username': <str>, 'password': <str>, 'timezone': <int>}`
+* **Returned**: `{'user_id': <int>}`
+* Deletes given event.
+
+#### `/event/<int:event_id>/invite`
+
+* **Method**: PUT
+* **Data**: `{'user_id': <int>}`
+* **Returned**: `None`
+* Creates event for given user for event.
+
+#### `/event/<int:event_id>/guests`
+
+* **Method**: GET
+* **Data**: `None`
+* **Returned**: `{'guests': {'no': [<str:username>, ...], 'maybe': [<str:username>, ...], 'unknown': [<str:username>, ...], 'yes': [<str:username>, ...]}}`
+* Returns guest list for given event.
+
+#### `/invites(/<int:archive>)?`
+
+* **Method**: GET
+* **Data**: `None`
+* **Returned**: `{'invites': [{'user_timezone': <int>, 'user_end_time': <str>, 'event_timezone': <int>, 'end_time': <str>, 'is_owner': <bool>, 'start_time': <str>, 'all_day_event': <bool>, 'description': <str>, 'attendance': <int>, 'event_id': <int>, 'user_start_time': <str>, 'event_name': <str>, 'invite_id': <int>}, ...]}`
+* Returns invites for given user. At default returns only invites for events that are not yet finished, with `archive == 0` returns only past, finished events.
+
+#### `/invite/<int:invite_id>`
+
+* **Method**: POST
+* **Data**: `{'all_day_event': <bool>, 'event_name': <str>, 'event_timezone': <int>, 'event_id': <int>, 'end_time': <str>, 'start_time': <str>, 'event_description': <str>}`
+* **Returned**: `None`
+* Edits event data of given invite. Unchanged values can be set to `null`.
+* **Method**: GET
+* **Data**: `None`
+* **Returned**: `{'user_timezone': <int>, 'user_end_time': <str>, 'event_timezone': <int>, 'end_time': <str>, 'is_owner': <bool>, 'start_time': <str>, 'all_day_event': <bool>, 'description': <str>, 'attendance': <int>, 'event_id': <int>, 'user_start_time': <str>, 'event_name': <str>, 'invite_id': <int>}`
+* Returns given invite.
+
+#### `/invite/<int:invite_id>/attendance`
+
+* **Method**: POST
+* **Data**: `{'attendance': <int>}`
+* **Returned**: `None`
+* Changes attendance status for given invite. Attendance status cannot be changed to 'unknown'
+
+#### `/invite/<int:invite_id>/restore`
+
+* **Method**: POST
+* **Data**: `None`
+* **Returned**: `None`
+* Deletes any private changes in invite description for event.
 
 ## Tests
 
