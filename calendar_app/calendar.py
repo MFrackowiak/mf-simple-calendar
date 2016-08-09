@@ -385,6 +385,15 @@ class Calendar:
         except Exception:
             return self.error_dict(2, "Database error. Contact administrator.")
 
+    def restore_invite_event_data(self, user_id, invite_id):
+        try:
+            if self._db.restore_default_event_data(user_id, invite_id):
+                return self._success
+            else:
+                return self.error_dict(4, "Invite does not exist or request malformed.")
+        except Exception:
+            return self.error_dict(2, "Database error. Contact administrator.")
+
     def edit_invite_attendance(self, user_id, invite_id, attendance):
         if 1 > attendance > 3:
             return self.error_dict(1, "Attendance status unknown or not allowed.")

@@ -47,14 +47,14 @@ def create_user():
                     session['user_id'] = ret_json['user_id']
                     session['user_tz'] = in_data['timezone']
             except KeyError:
-                ret_json = calendar_app.error_dict(4, "Request malformed.")
+                ret_json = calendar_app.error_dict(4, "Request malformed, missing data.")
             except Exception:
                 ret_json = calendar_app.error_dict(5, "Server error.")
 
     return jsonify(ret_json)
 
 
-@app.route("/users/<str:like>", methods=['GET'])
+@app.route("/users/<string:like>", methods=['GET'])
 def get_users_like(like):
     if session.get('user_id', None) is None:
         ret_json = calendar_app.error_dict(1, "Need to log in before performing any action.")
@@ -297,6 +297,19 @@ def get_event_guests(event_id):
     return jsonify(ret_json)
 
 
+@app.route("/invite/<int:invite_id>/restore", methods=['POST'])
+def restore_invite_data(invite_id):
+    if session.get('user_id', None) is None:
+        ret_json = calendar_app.error_dict(1, "Need to log in before performing any action.")
+    else:
+        try:
+            ret_json = calendar_app.restore_invite_event_data(session['user_id'], invite_id)
+        except Exception:
+            ret_json = calendar_app.error_dict(5, "Server error.")
+
+    return jsonify(ret_json)
+
+
 @app.route("/invite/<int:invite_id>/attendance", methods=['POST'])
 def change_attendance_for_invite(invite_id):
     if session.get('user_id', None) is None:
@@ -345,7 +358,7 @@ def get_invites(archive):
         ret_json = calendar_app.error_dict(1, "Need to log in before performing any action.")
     else:
         try:
-            ret_json = calendar_app.get_invites(session['user_id'], session['user_tz'])
+            ret_json = calendar_app.get_invites(session['user_id'], session['user_tz'], archive)
         except Exception:
             ret_json = calendar_app.error_dict(5, "Server error.")
 
@@ -353,4 +366,5 @@ def get_invites(archive):
 
 
 if __name__ == '__main__':
+    app.secret_key = 'flaskmfsimplecalendarsecretkey'
     app.run(host='0.0.0.0', port=5000, debug=True)
