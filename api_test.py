@@ -76,4 +76,33 @@ if __name__ == '__main__':
     print(s_2.get(api_adr + 'calendar/{}'.format(c_1)).json())
 
     print(s_2.put(api_adr + 'event/{}/invite'.format(event_json['event_id']), json={'user_id': u3}).json())
-    print(s_3.get(api_adr + 'invites').json())
+
+    invites = s_3.get(api_adr + 'invites').json()
+
+    print(invites['invites'][-1])
+    invite = invites['invites'][-1]
+
+    print(s_3.post(api_adr + 'invite/{}'.format(invite['invite_id']), json={'start_time': time_string(t, -2, False),
+                                                                            'end_time': time_string(
+                                                                                t + timedelta(hours=24),
+                                                                                -2, False),
+                                                                            'event_name': 'my_own',
+                                                                            'all_day_event': False,
+                                                                            'event_timezone': -2}).json())
+    print(s_3.get(api_adr + 'invites').json()['invites'][-1])
+    event_j = s_2.get(api_adr + 'event/{}'.format(event_json['event_id'])).json()['event']
+    event_j['event_description'] = 'This is new desc'
+    event_j['event_timezone'] = None
+
+    print('EDIT EVENT', s_2.post(api_adr + 'event/{}'.format(event_json['event_id']), json=event_j).json())
+
+    print(s_3.get(api_adr + 'invites').json()['invites'][-1])
+    print(s_3.post(api_adr + 'invite/{}/attendance'.format(invite['invite_id']), json={'attendance': 1}).json())
+
+    print(s_3.get(api_adr + 'invites').json()['invites'][-1])
+    print(s_3.post(api_adr + 'invite/{}/restore'.format(invite['invite_id'])).json())
+
+    print(s_3.get(api_adr + 'invites').json()['invites'][-1])
+
+    print('DELETE EVENT', s_1.delete(api_adr + 'event/{}'.format(event_json['event_id'])).json())
+    print('GET EVENTS', s_1.get(api_adr + 'calendar/{}'.format(c_1)).json())
