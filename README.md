@@ -3,16 +3,16 @@
 ## Design assumptions
 
 * Only backend is implemented with appropriate API.
-* Date/time is saved in database in utc timezone. Timezone info is saved additionally.
+* Date/time is saved in database in UTC timezone. Timezone info is saved additionally.
 * Calendar colors are from CSS3/SVG named colors.
-* All-day events span the whole day in their timezone; the day of the event is displayed differently if time difference is higher than 12 hours.
+* All-day events span the whole day in their timezone; the day of the event is displayed differently if time difference is greater than 12 hours.
 * Event owner (creator) is automatically invited to his/her event.
 * Event owner can't edit his/her invite, can only perform general event edits.
 * There can be only one event owner.
 * Only users with edit-permission on event calendar can send invitations.
-* Only users with read-permission on event calendar or invited to event can see list of its guests.
+* Only users with at least read-permission on event calendar or invited to an event can see list of its guests.
 * Only calendar owner can share it further.
-* Assumed simplification - app only operate with integer utc timezone offsets.
+* Assumed simplification - app only operate with integer UTC timezone offsets.
 
 ## App design
 
@@ -22,7 +22,7 @@ App is a traditional three-layered application.
 2. Application logic - `Calendar` implementing most of the app logic - like user privileges to perform certain actions or checking correct format of received data.
 3. Presentation - REST-like API based on Flask framework, which only checks completness of received requests.
 
-To simplify conversion of data to JSON format, python dictionaries are widely used format returned by methods.
+To simplify conversion of data to JSON format, python dictionaries are widely used format returned.
 
 ## API
 
@@ -143,7 +143,7 @@ All dates are returned in format `%Y-%m-%d %H:%M:%S %z` (as in Python datetime).
 * **Method**: GET
 * **Data**: `None`
 * **Returned**: `{'event': {'all_day_event': <bool>, 'event_name': <str>, 'event_timezone': <int>, 'event_id': <int>, 'end_time': <str>, 'start_time': <str>, 'event_description': <str>, 'user_timezone': <int>, 'user_end_time': <str>, 'user_start_time': <str>}}`
-* Return given event data.
+* Returns given event data.
 * **Method**: POST
 * **Data**: `{'all_day_event': <bool>, 'event_name': <str>, 'event_timezone': <int>, 'event_id': <int>, 'end_time': <str>, 'start_time': <str>, 'event_description': <str>}`
 * **Returned**: `None`
@@ -199,10 +199,10 @@ All dates are returned in format `%Y-%m-%d %H:%M:%S %z` (as in Python datetime).
 * **Returned**: `None`
 * Deletes any private changes in invite description for event.
 
-## Tests
+## Testing
 
-Tests performed was partially automated (using attached scripts), checking proper responses app behaviour by observing log of responses. Each layer was tested separately (`database_test.py` for `DatabseManager`, `calendar_test.py` for `Calendar` and `api_test.py` for server API) and only after previous layer was checked and (most of) bugs fixed, next layer was built.
-Such approach to app testing allowed to avoid (in most cases) need to debug previous layer to find erroneous code. Some bugs were still revealed only after certain conditions were met during further testing. 
+Tests performed were partially automated (using attached scripts), checking proper responses app behaviour by observing log of responses. Each layer was tested separately (`database_test.py` for `DatabaseManager`, `calendar_test.py` for `Calendar` and `api_test.py` for server API) and only after previous layer was checked and (most of) bugs fixed, next layer was built.
+Such approach to app testing allowed to avoid (in most cases) the need to debug previous layer to find erroneous code. Some bugs were still revealed only after certain conditions were met during further testing. 
 
 ## \#TODO
 
