@@ -234,7 +234,8 @@ def create_event(calendar_id):
                                               in_data['event_description'], in_data['start_time'],
                                               in_data['end_time'], in_data.get('event_timezone', None),
                                               in_data['all_day_event'])
-        except (KeyError, TypeError):
+        except (KeyError, TypeError) as e:
+            raise e
             ret_json = calendar_app.error_dict(4, "Request malformed. Missing data.")
         except Exception:
             ret_json = calendar_app.error_dict(5, "Server error.")

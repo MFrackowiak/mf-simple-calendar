@@ -1,6 +1,6 @@
 import webcolors
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, tzinfo
 from sqlalchemy.exc import IntegrityError
 
 from .database_manager import DatabaseManager
@@ -59,7 +59,7 @@ class Calendar:
             s = datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S %z").replace(hour=0, minute=0, second=0)
             e = s + timedelta(days=1)
 
-            timezone_delta = int(s.tzinfo.utcoffset() / 60)
+            timezone_delta = int(s.tzinfo.utcoffset(None).seconds / 3600)
         else:
             s = datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S").replace(hour=0, minute=0, second=0, tzinfo=timezone(
                 timedelta(hours=timezone_delta)))
