@@ -190,7 +190,9 @@ class DatabaseManager:
 
         connection = self._engine.connect()
 
-        if connection.execute(_select).fetchone()[0] == user_id:
+        result = connection.execute(_select).fetchone()
+
+        if result is not None and result[0] == user_id:
             connection.close()
             return 3
 

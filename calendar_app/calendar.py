@@ -140,13 +140,13 @@ class Calendar:
         password = password.strip()
 
         if not 4 <= len(username) <= 30:
-            return self.error_dict(1, "Username should have between 4 and 30 characters.")
+            return self.error_dict(1, "Username must be at least 4 and up to 30 characters long.")
 
         if not 8 <= len(password) <= 30:
-            return self.error_dict(1, "Password should have between 8 and 30 characters.")
+            return self.error_dict(1, "Password must be at least 8 and up to 30 characters long.")
 
         if not -12 <= own_timezone <= 14:
-            return self.error_dict(1, "Timezone should be between -11 and +12, 0 is UTC.")
+            return self.error_dict(1, "Timezone should be between -12 and +14, 0 is UTC.")
 
         try:
             return self.success_dict('user_id', self._db.add_user(username, password, own_timezone))
@@ -159,7 +159,7 @@ class Calendar:
         calendar_name = calendar_name.strip()
 
         if not 4 <= len(calendar_name) <= 30:
-            return self.error_dict(1, "Calendar name should have between 4 and 30 characters.")
+            return self.error_dict(1, "Calendar name must be at least 4 and up to 30 characters long..")
 
         try:
             webcolors.name_to_hex(calendar_color)
@@ -186,7 +186,7 @@ class Calendar:
         event_description = event_description.strip()
 
         if not 4 <= len(event_name) <= 30:
-            return self.error_dict(1, "Event name should have between 4 and 30 characters.")
+            return self.error_dict(1, "Event name must be at least 4 and up to 30 characters long.")
 
         if len(event_description) > 200:
             return self.error_dict(1, "Event description too long, it should contain up to 200 characters.")
@@ -215,7 +215,7 @@ class Calendar:
     def share_calendar(self, user_id, calendar_id, share_with_id, write_permission):
         try:
             if not self._calendar_owner(user_id, calendar_id):
-                return self.error_dict(3, "Only calendar owner can further share it.")
+                return self.error_dict(3, "Only calendar owner can share it further.")
         except ValueError:
             return self.error_dict(1, "Calendar does not exist.")
 
@@ -270,7 +270,7 @@ class Calendar:
         event_description = event_description.strip()
 
         if not 4 <= len(event_name) <= 30:
-            return self.error_dict(1, "Event name should have between 4 and 30 characters.")
+            return self.error_dict(1, "Event name must be at least 4 and up to 30 characters long.")
 
         if len(event_description) > 200:
             return self.error_dict(1, "Event description too long, it should contain up to 200 characters.")
@@ -358,7 +358,7 @@ class Calendar:
         own_description = own_description.strip() if own_description is not None else None
 
         if own_name is not None and not 4 <= len(own_name) <= 30:
-            return self.error_dict(1, "Event name should have between 4 and 30 characters.")
+            return self.error_dict(1, "Event name must be at least 4 and up to 30 characters long.")
 
         if own_description is not None and len(own_description) > 200:
             return self.error_dict(1, "Event description too long, it should contain up to 200 characters.")
@@ -417,7 +417,7 @@ class Calendar:
             if not self._calendar_owner(user_id, self._db.get_calendar_id_for_share(share_id)):
                 return self.error_dict(3, "Calendar ownership required to perform this action.")
         except ValueError:
-            return self.error_dict(1, "Share does not exist.")
+            return self.error_dict(1, "This calendar was not shared with given user.")
 
         try:
             if self._db.update_share(share_id, write_permission):
@@ -432,7 +432,7 @@ class Calendar:
             if not self._calendar_owner(user_id, self._db.get_calendar_id_for_share(share_id)):
                 return self.error_dict(3, "Calendar ownership required to perform this action.")
         except ValueError:
-            return self.error_dict(1, "Share does not exist.")
+            return self.error_dict(1, "This calendar was not shared with given user.")
 
         try:
             if self._db.delete_share(share_id):

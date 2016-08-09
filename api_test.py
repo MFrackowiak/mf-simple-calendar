@@ -26,4 +26,23 @@ if __name__ == '__main__':
     result = s_1.post(api_adr + 'auth', json={'username': 'sessionUser1', 'password': '12341234'})
     print(result.json(), s_1.get(api_adr + 'calendars').json())
 
-    s_1.put()
+    result = s_1.put(api_adr + 'calendar', json={'calendar_name': 'My First Calendar',
+                                                 'calendar_color': 'darkred'}).json()
+    print(result)
+    c_1 = result['calendar_id']
+
+    result = s_2.put(api_adr + 'user', json={'username': 'user_2', 'password': 'qwerqwer', 'timezone': -6}).json()
+    if not result['success']:
+        s_2.post(api_adr + 'auth', json={'username': 'user_2', 'password': 'qwerqwer'})
+
+    result = s_3.put(api_adr + 'user', json={'username': 'user_3', 'password': 'qwerqwer', 'timezone': 13}).json()
+    if not result['success']:
+        s_3.post(api_adr + 'auth', json={'username': 'user_3', 'password': 'qwerqwer'})
+
+    print(s_2.get(api_adr + 'calendar/{}'.format(c_1)).json())
+    print(s_1.get(api_adr + 'calendar/{}'.format(c_1)).json())
+    print(s_1.get(api_adr + 'calendar/{}'.format(999)).json())
+
+    print(s_1.get(api_adr + 'users/{}'.format('user_')).json())
+
+    print(s_1.put(api_adr + 'calendar/{}/share'.format(c_1)).json())

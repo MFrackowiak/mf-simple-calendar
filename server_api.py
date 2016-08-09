@@ -46,7 +46,7 @@ def create_user():
                 if ret_json['success']:
                     session['user_id'] = ret_json['user_id']
                     session['user_tz'] = in_data['timezone']
-            except KeyError:
+            except (KeyError, TypeError):
                 ret_json = calendar_app.error_dict(4, "Request malformed, missing data.")
             except Exception:
                 ret_json = calendar_app.error_dict(5, "Server error.")
@@ -85,7 +85,7 @@ def auth_user():
                     session['user_tz'] = ret_json['tz']
 
                     ret_json = calendar_app.success_dict('auth', True)
-            except KeyError:
+            except (KeyError, TypeError):
                 ret_json = calendar_app.error_dict(4, "Request malformed.")
             except Exception:
                 ret_json = calendar_app.error_dict(5, "Server error.")
@@ -116,7 +116,7 @@ def create_calendar():
 
             ret_json = calendar_app.add_calendar(session['user_id'], in_data['calendar_name'],
                                                  in_data['calendar_color'])
-        except KeyError:
+        except (KeyError, TypeError):
             ret_json = calendar_app.error_dict(4, "Request malformed.")
         except Exception:
             ret_json = calendar_app.error_dict(5, "Server error.")
@@ -150,7 +150,7 @@ def edit_delete_calendar(calendar_id):
                                                       in_data['calendar_color'])
             elif request.method == 'DELETE':
                 ret_json = calendar_app.delete_calendar(session['user_id'], calendar_id)
-        except KeyError:
+        except (KeyError, TypeError):
             ret_json = calendar_app.error_dict(4, "Request malformed. Missing data.")
         except Exception:
             ret_json = calendar_app.error_dict(5, "Server error.")
@@ -168,7 +168,7 @@ def share_calendar(calendar_id):
 
             ret_json = calendar_app.share_calendar(session['user_id'], calendar_id, in_data['user_id'],
                                                    in_data['write_permission'])
-        except KeyError:
+        except (KeyError, TypeError):
             ret_json = calendar_app.error_dict(4, "Request malformed, missing data.")
         except Exception:
             ret_json = calendar_app.error_dict(5, "Server error.")
@@ -214,7 +214,7 @@ def edit_delete_share(share_id):
                 ret_json = calendar_app.edit_share_permission(session['user_id'], share_id, in_data['write_permission'])
             elif request.method == 'DELETE':
                 ret_json = calendar_app.delete_share(session['user_id'], share_id)
-        except KeyError:
+        except (KeyError, TypeError):
             ret_json = calendar_app.error_dict(4, "Request malformed. Missing data.")
         except Exception:
             ret_json = calendar_app.error_dict(5, "Server error.")
@@ -234,7 +234,7 @@ def create_event(calendar_id):
                                               in_data['event_description'], in_data['start_time'],
                                               in_data['end_time'], in_data.get('event_timezone', None),
                                               in_data['all_day_event'])
-        except KeyError:
+        except (KeyError, TypeError):
             ret_json = calendar_app.error_dict(4, "Request malformed. Missing data.")
         except Exception:
             ret_json = calendar_app.error_dict(5, "Server error.")
@@ -259,7 +259,7 @@ def get_edit_delete_event(event_id):
                 ret_json = calendar_app.delete_event(session['user_id'], event_id)
             elif request.method == 'GET':
                 ret_json = calendar_app.get_event(session['user_id'], session['user_tz'], event_id)
-        except KeyError:
+        except (KeyError, TypeError):
             ret_json = calendar_app.error_dict(4, "Request malformed. Missing data.")
         except Exception:
             ret_json = calendar_app.error_dict(5, "Server error.")
@@ -276,7 +276,7 @@ def invite_for_event(event_id):
             in_data = request.get_json()
 
             ret_json = calendar_app.invite_user(session['user_id'], event_id, in_data['user_id'], False)
-        except KeyError:
+        except (KeyError, TypeError):
             ret_json = calendar_app.error_dict(4, "Request malformed. Missing data.")
         except Exception:
             ret_json = calendar_app.error_dict(5, "Server error.")
@@ -319,7 +319,7 @@ def change_attendance_for_invite(invite_id):
             in_data = request.get_json()
 
             ret_json = calendar_app.edit_invite_attendance(session['user_id'], invite_id, in_data['attendance'])
-        except KeyError:
+        except (KeyError, TypeError):
             ret_json = calendar_app.error_dict(4, "Request malformed. Missing data.")
         except Exception:
             ret_json = calendar_app.error_dict(5, "Server error.")
@@ -343,7 +343,7 @@ def edit_invite(invite_id):
                                                     in_data.get('all_day_event', None))
             elif request.method == 'GET':
                 ret_json = calendar_app.get_invite(session['user_id'], session['user_tz'], invite_id)
-        except KeyError:
+        except (KeyError, TypeError):
             ret_json = calendar_app.error_dict(4, "Request malformed. Missing data.")
         except Exception:
             ret_json = calendar_app.error_dict(5, "Server error.")
