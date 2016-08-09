@@ -59,7 +59,7 @@ class Calendar:
             s = datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S %z").replace(hour=0, minute=0, second=0)
             e = s + timedelta(days=1)
 
-            timezone_delta = int(s.tzinfo.utcoffset(None).seconds / 3600)
+            timezone_delta = int(s.tzinfo.utcoffset(None).seconds / 3600) + s.tzinfo.utcoffset(None).days * 24
         else:
             s = datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S").replace(hour=0, minute=0, second=0, tzinfo=timezone(
                 timedelta(hours=timezone_delta)))
@@ -76,22 +76,27 @@ class Calendar:
 
         time_difference = 0
 
-        if not (start_time.hour == 0 and start_time.minute == 0 and start_time.second == 0):
-            time_difference = start_time - start_time.replace(hour=0, minute=0, second=0)
+        start_time_as_event_timezone = start_time.astimezone(timezone(timedelta(hours=original_timezone)))
+
+        if not (start_time_as_event_timezone.hour == 0 and start_time_as_event_timezone.minute == 0 and
+                        start_time_as_event_timezone.second == 0):
+            time_difference = start_time_as_event_timezone - start_time_as_event_timezone.replace(hour=0, minute=0,
+                                                                                                  second=0)
             time_difference = time_difference.seconds / 3600.0
 
-            start_time = start_time.replace(hour=0, minute=0, second=0)
+            start_time_as_event_timezone = start_time.replace(hour=0, minute=0, second=0)
 
         time_difference += user_timezone - original_timezone
 
         if time_difference > 12 or time_difference < -12:
             if time_difference > 0:
-                start_time += timedelta(days=1)
+                start_time_as_event_timezone += timedelta(days=1)
             else:
-                start_time -= timedelta(days=1)
+                start_time_as_event_timezone -= timedelta(days=1)
 
-        return start_time.replace(tzinfo=timezone(timedelta(hours=user_timezone))),\
-               (start_time + timedelta(days=1)).replace(tzinfo=timezone(timedelta(hours=user_timezone)))
+        return start_time_as_event_timezone.replace(tzinfo=timezone(timedelta(hours=user_timezone))), \
+               (start_time_as_event_timezone + timedelta(days=1)).replace(
+                   tzinfo=timezone(timedelta(hours=user_timezone)))
 
     def _convert_date_to_tz(self, start_time, end_time, timezone_delta):
         if start_time.tzinfo is None:
@@ -476,7 +481,7 @@ class Calendar:
         try:
             if not (self._is_invited(user_id, event_id) or self._can_read_calendar(user_id,
                                                                                    self._db.get_calendar_id_for_event(
-                                                                                           event_id))):
+                                                                                       event_id))):
                 return self.error_dict(3, "You don't have permission to access guest list.")
         except ValueError:
             return self.error_dict(1, "Event does not exist.")

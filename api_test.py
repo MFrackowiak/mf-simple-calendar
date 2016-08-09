@@ -6,13 +6,13 @@ def time_string(d, t, save_timezone=True):
     d = d.replace(tzinfo=timezone(timedelta(hours=t)))
 
     if save_timezone:
+        print(d.strftime("%Y-%m-%d %H:%M:%S %z"))
         return d.strftime("%Y-%m-%d %H:%M:%S %z")
     else:
         return d.strftime("%Y-%m-%d %H:%M:%S")
 
 
 api_adr = "http://localhost:5000/"
-
 
 if __name__ == '__main__':
     s_1, s_2, s_3 = Session(), Session(), Session()
@@ -60,15 +60,20 @@ if __name__ == '__main__':
 
     t = datetime.utcnow()
     print(s_2.put(api_adr + 'calendar/{}/event'.format(c_1), json={'event_name': 'test1', 'event_description': 'desc',
-                                                                   'start_time': time_string(t, 4),
-                                                                   'end_time': time_string(t + timedelta(hours=24), 4),
+                                                                   'start_time': time_string(t, -5),
+                                                                   'end_time': time_string(t + timedelta(hours=24), -5),
                                                                    'all_day_event': True}).json())
     s_1.post(api_adr + 'share/{}'.format(s_c_1_u_2), json={'write_permission': True})
 
-    print(s_2.put(api_adr + 'calendar/{}/event'.format(c_1), json={'event_name': 'test1', 'event_description': 'desc',
-                                                                   'start_time': time_string(t, 4),
-                                                                   'end_time': time_string(t + timedelta(hours=24), 4),
-                                                                   'all_day_event': True}).json())
+    event_json = s_2.put(api_adr + 'calendar/{}/event'.format(c_1),
+                         json={'event_name': 'test1', 'event_description': 'desc',
+                               'start_time': time_string(t, -5),
+                               'end_time': time_string(t + timedelta(hours=24), -5),
+                               'all_day_event': True}).json()
+    print(event_json)
 
     print(s_1.get(api_adr + 'calendar/{}'.format(c_1)).json())
     print(s_2.get(api_adr + 'calendar/{}'.format(c_1)).json())
+
+    print(s_2.put(api_adr + 'event/{}/invite'.format(event_json['event_id']), json={'user_id': u3}).json())
+    print(s_3.get(api_adr + 'invites').json())
