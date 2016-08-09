@@ -157,10 +157,9 @@ class DatabaseManager:
                                                              "tz": r[3]})
 
     def get_users_like(self, like_string):
-        _select = self._users.select(self._users.c.username.like(like_string))
+        _select = self._users.select(self._users.c.username.like('%' + like_string + '%'))
 
-        return self._fetch_many_select(_select, lambda r: {"user_id": r[0], "username": r[1], "password": r[2],
-                                                           "tz": r[3]})
+        return self._fetch_many_select(_select, lambda r: {"user_id": r[0], "username": r[1]})
 
     def get_user_calendars(self, user_id):
         _select = self._calendars.select(self._calendars.c.owner_id == user_id)
@@ -191,7 +190,9 @@ class DatabaseManager:
 
         connection = self._engine.connect()
 
-        if connection.execute(_select).fetchone()[0] == user_id:
+        result = connection.execute(_select).fetchone()
+
+        if result is not None and result[0] == user_id:
             connection.close()
             return 3
 
@@ -217,8 +218,31 @@ class DatabaseManager:
                                                            "event_timezone": r[4], "all_day_event": r[5],
                                                            "event_description": r[6]})
 
+    def get_invite(self, user_id, invite_id):
+        _select = select([self._events.c.event_id, self._events.c.event_name, self._events.c.start_time,
+                          self._events.c.end_time, self._events.c.event_timezone, self._events.c.all_day_event,
+                          self._invites.c.invite_id, self._invites.c.is_owner, self._invites.c.has_edited,
+                          self._invites.c.own_name, self._invites.c.own_start_time, self._invites.c.own_end_time,
+                          self._invites.c.own_all_day_event, self._invites.c.attendance_status,
+                          self._events.c.event_description, self._invites.c.own_description,
+                          self._invites.c.own_timezone]). \
+            select_from(self._events.join(self._invites)).where(
+            and_(self._invites.c.user_id == user_id, self._invites.c.invite_id == invite_id))
+
+        return self._fetch_single_select(_select,
+                                         lambda r: {"event_id": r[0],
+                                                    "event_name": r[9] if r[8] and r[9] is not None else r[1],
+                                                    "start_time": set_utc(
+                                                        r[10] if r[8] and r[10] is not None else r[2]),
+                                                    "end_time": set_utc(r[11] if r[8] and r[11] is not None else r[3]),
+                                                    "event_timezone": r[16] if r[8] and r[16] is not None else r[4],
+                                                    "all_day_event": r[12] if r[8] and r[12] is not None else r[5],
+                                                    "invite_id": r[6],
+                                                    "is_owner": r[7],
+                                                    "attendance": r[13],
+                                                    "description": r[15] if r[8] and r[15] is not None else r[14]})
+
     def get_invites(self, user_id, archive=False):
-        # TODO timezones!
         _or_clause = or_(self._events.c.end_time > datetime.utcnow() if not archive else
                              self._events.c.end_time < datetime.utcnow(),
                          self._invites.c.own_end_time > datetime.utcnow() if not archive else
@@ -234,7 +258,6 @@ class DatabaseManager:
             select_from(self._events.join(self._invites)).where(
             and_(self._invites.c.user_id == user_id, _or_clause))
 
-        # TODO timezones in invites...?
         return self._fetch_many_select(_select,
                                        lambda r: {"event_id": r[0],
                                                   "event_name": r[9] if r[8] and r[9] is not None else r[1],
