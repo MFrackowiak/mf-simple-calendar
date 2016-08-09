@@ -50,6 +50,7 @@ All dates are returned in format `%Y-%m-%d %H:%M:%S %z` (as in Python datetime).
 *Note: `None` in returned means that given method returns only `success` flag.*
 
 * `/user`
+
    **Method**: PUT
    **Data**: `{'username': <str>, 'password': <str>, 'timezone': <int>}`
    **Returned**: `{'user_id': <int>}`
