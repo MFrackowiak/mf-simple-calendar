@@ -1,4 +1,3 @@
-from datetime import datetime, timezone, timedelta
 from flask import Flask, jsonify, request, session
 
 from calendar_app.calendar import calendar_app

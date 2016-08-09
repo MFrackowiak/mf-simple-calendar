@@ -16,9 +16,11 @@
 ## App design
 
 App is a traditional three-layered application.
+
 1. Data access - `DatabaseManager` utilizing SQLAlchemy to connect with MySQL database. This layer implements some basic logic as SQL constraints (uniqueness of shares, invites or usernames).
 2. Application logic - `Calendar` implementing most of the app logic - like user privileges to perform certain actions or checking correct format of received data.
 3. Presentation - REST-like API based on Flask framework, which only checks completness of received requests.
+
 To simplify conversion of data to JSON format, python dictionaries are widely used format returned by methods.
 
 ## API
@@ -31,6 +33,7 @@ Such approach to app testing allowed to avoid (in most cases) need to debug prev
 ## \#TODO
 
 As always, there are some useful features which were missed during initial design. This app could definitely use:
+
 * Week / month / year for selecting loaded events / invites.
 * Better user search mechanism.
 * Possibility of sending multiple invites at once or automated invites for users who share given calendar.
